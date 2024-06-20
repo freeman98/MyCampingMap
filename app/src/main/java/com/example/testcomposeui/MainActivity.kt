@@ -4,14 +4,22 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
@@ -30,13 +39,49 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TestComposeUITheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    GreetingWithButton(name = "Android", modifier = Modifier.padding(innerPadding))
+//                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+//                    GreetingWithButton(name = "Android", modifier = Modifier.padding(innerPadding))
+//                }
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    MainScreen()
                 }
+
             }
         }
     }
 }
+
+//@Composable
+//fun MainScreen() {
+//    var text by remember { mutableStateOf("Hello, World!") }
+//    var checked by remember { mutableStateOf(false) }
+//    var sliderPosition by remember { mutableStateOf(0.5f) }
+//
+//    Column(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .padding(16.dp),
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.Center
+//    ) {
+//        Text(text = text)
+//        Spacer(modifier = Modifier.height(8.dp))
+//        Button(onClick = { text = "Button Clicked!" }) {
+//            Text("Click Me")
+//        }
+//        Spacer(modifier = Modifier.height(8.dp))
+//        Image(
+//            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+//            contentDescription = "Example Image"
+//        )
+//        Spacer(modifier = Modifier.height(8.dp))
+//        Checkbox(checked = checked, onCheckedChange = { checked = it })
+//        Spacer(modifier = Modifier.height(8.dp))
+//        BasicTextField(value = text, onValueChange = { text = it })
+//        Spacer(modifier = Modifier.height(8.dp))
+//        Slider(value = sliderPosition, onValueChange = { sliderPosition = it })
+//    }
+//}
 
 // Greeting 컴포저블 함수, 기본적으로 "Hello {name}!" 텍스트를 표시
 @Composable
@@ -77,6 +122,7 @@ fun GreetingWithButton(name: String, modifier: Modifier = Modifier) {
 fun GreetingPreview() {
     // 미리보기에서 사용할 Theme 설정
     TestComposeUITheme {
-        GreetingWithButton("Android")
+//        GreetingWithButton("Android")
+        MainScreen()
     }
 }
