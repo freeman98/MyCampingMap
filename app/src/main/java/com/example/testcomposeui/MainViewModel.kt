@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
 //MVVM 모델 과 컴포스를 적용
 class MainViewModel: ViewModel(){
 
+    private val _navigateToSecondActivity = MutableStateFlow(false)
+    val navigateToSecondActivity: StateFlow<Boolean> = _navigateToSecondActivity
+
     private val _text = MutableStateFlow("Hello, World!")
     val text: StateFlow<String> = _text
 
@@ -29,8 +32,13 @@ class MainViewModel: ViewModel(){
     }
 
     fun onButtonClick() {
-        _text.value = "Button Clicked!"
+        _navigateToSecondActivity.value = true
     }
+
+    fun onNavigatedToSecondActivity() {
+        _navigateToSecondActivity.value = false
+    }
+
 
 
 }

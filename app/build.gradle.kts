@@ -50,7 +50,14 @@ android {
 }
 
 dependencies {
-    implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+    implementation (libs.lifecycle.viewmodel.compose)
+    implementation (libs.play.services.maps)
+    implementation (libs.play.services.location)
+    implementation (libs.places)
+    implementation (libs.androidx.material)
+    implementation (libs.github.glide)  //이미치 저리 관련.
+    annotationProcessor (libs.compiler)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -58,7 +65,7 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+    implementation(libs.androidx.material3.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
