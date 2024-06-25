@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -45,13 +46,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.example.testcomposeui.data.User
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
-import com.example.testcomposeui.data.CampData
-import com.example.testcomposeui.data.CampDummyDataProvider
-import com.example.testcomposeui.data.Const
 
 @Composable
 fun MainTopAppBar() {
@@ -73,7 +73,8 @@ fun MainTopAppBar() {
                 .padding(paddingValues)
         ) {
 //            MapLsit()
-            CampDataListView(campDatas = CampDummyDataProvider.campList)
+//            CampDataListView(campDatas = CampDummyDataProvider.campList)
+            CampDataListView()
         }
     }
 }
@@ -114,6 +115,7 @@ fun CustomSmallTopAppBar(
         }
     )
 }
+
 
 //@Composable
 //fun MapLsit(
@@ -163,16 +165,19 @@ fun CustomSmallTopAppBar(
 //}
 
 @Composable
-fun CampDataListView(modifier: Modifier = Modifier, campDatas: List<CampData>) {
+//fun CampDataListView(modifier: Modifier = Modifier, campDatas: List<CampData>) {
+fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel = viewModel()) {
     val context = LocalContext.current
+    val users = mainViewModel.users.observeAsState(initial = emptyList()).value
+
     //메모리 관리가 들어간 LazyColumn
     LazyColumn(modifier = modifier.padding(vertical = 14.dp /*상하 패딩.*/)) {
-        items(campDatas) {
-            CampDataView(it, onCardClick = { data ->
-                Log.d(TAG, "onCardClick() $data")
-                val intent = Intent(context, MapActivity::class.java).apply {
-                    putExtra(Const.EXTRA_CAMP_DATA, data)
-                }
+        items(users) {
+            CampDataView(it, onCardClick = { user ->
+                Log.d(TAG, "onCardClick() $user")
+                // User 데이터 발행
+                BaseViewModel.LiveDataBus._selectUser.postValue(user)
+                val intent = Intent(context, MapActivity::class.java)
                 context.startActivity(intent)
             })
         }
@@ -180,7 +185,7 @@ fun CampDataListView(modifier: Modifier = Modifier, campDatas: List<CampData>) {
 }
 
 @Composable
-fun CampDataView(campData: CampData, onCardClick: (CampData) -> Unit) {
+fun CampDataView(user: User, onCardClick: (User) -> Unit) {
     val typography = MaterialTheme.typography
     val elevation = CardDefaults.cardElevation(
         defaultElevation = 10.dp
@@ -188,7 +193,7 @@ fun CampDataView(campData: CampData, onCardClick: (CampData) -> Unit) {
 
     Card(
         modifier = Modifier
-            .clickable(onClick = { onCardClick(campData) })
+            .clickable(onClick = { onCardClick(user) })
             .fillMaxWidth()     //가로 전체 화면 다쓴다.
             .padding(10.dp),    //카드간 간격.
         shape = RoundedCornerShape(12.dp),
@@ -211,17 +216,21 @@ fun CampDataView(campData: CampData, onCardClick: (CampData) -> Unit) {
 //                    .clip(CircleShape)
 //                    .background(MyBlue)
 //            )
-            ProfileImg(campData.imgUrl)
+            ProfileImg("https://www.w3schools.com/w3css/img_avatar.png")
 
             Column() {
-                Text(
-                    text = campData.name,
-                    style = typography.titleLarge
-                )
-                Text(
-                    text = campData.address,
-                    style = typography.titleMedium
-                )
+                user.name?.let {
+                    Text(
+                        text = it,
+                        style = typography.titleLarge
+                    )
+                }
+                user.email?.let {
+                    Text(
+                        text = it,
+                        style = typography.titleMedium
+                    )
+                }
             }
         }
     }

@@ -3,7 +3,6 @@ package com.example.testcomposeui.data
 import android.os.Parcel
 import android.os.Parcelable
 import com.google.android.gms.maps.model.LatLng
-import java.io.Serializable
 
 class CampData() : Parcelable {
     var name: String = "캠핑장 이름 - "

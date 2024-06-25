@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    id("kotlin-parcelize")
 }
 
 android {
@@ -55,8 +56,11 @@ dependencies {
     implementation (libs.play.services.location)
     implementation (libs.places)
     implementation (libs.androidx.material)
-    implementation (libs.github.glide)  //이미치 저리 관련.
+    implementation (libs.github.glide)
+    implementation(libs.androidx.runtime.livedata)  //이미치 저리 관련.
     annotationProcessor (libs.compiler)
+    implementation ("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.11.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

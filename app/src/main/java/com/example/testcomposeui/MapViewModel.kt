@@ -1,4 +1,5 @@
 package com.example.testcomposeui
 
-class MapViewModel {
+class MapViewModel: BaseViewModel(){
+
 }

@@ -1,11 +1,45 @@
 package com.example.testcomposeui
 
-import androidx.lifecycle.ViewModel
+import android.content.ContentValues.TAG
+import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import com.example.testcomposeui.api.RetrofitInstance
+import com.example.testcomposeui.data.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 //MVVM 모델 과 컴포스를 적용
-class MainViewModel: ViewModel(){
+class MainViewModel: BaseViewModel(){
+
+    private val _users = MutableLiveData<List<User>>()
+    val users: LiveData<List<User>> = _users
+
+    init {
+        fetchUsers()
+    }
+
+    private fun fetchUsers() {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitInstance.api.getUsers()
+                if (response.isSuccessful) {
+                    val userList = response.body() ?: emptyList()
+                    for (user in userList) {
+                        Log.d(TAG, user.toString())
+                    }
+                    _users.value = userList
+                } else {
+                    // Handle HTTP error
+                }
+            } catch (e: Exception) {
+                // Handle exceptions
+            }
+        }
+    }
+
 
     private val _navigateToSecondActivity = MutableStateFlow(false)
     val navigateToSecondActivity: StateFlow<Boolean> = _navigateToSecondActivity
