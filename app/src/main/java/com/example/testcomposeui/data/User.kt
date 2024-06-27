@@ -1,18 +1,23 @@
 package com.example.testcomposeui.data
 
+import androidx.compose.runtime.Immutable
+
+@Immutable  //절대적으로 변경되지 않음을 정의.
 data class User(
-    var id: Int,
-    var name: String?,
-    var username: String?,
-    var email: String?,
-    var address: Address?,
-    var phone: String?,
-    var website: String?,
-    var company: Company?
+    val id: Int,
+    val name: String?,
+    val username: String?,
+    val email: String?,
+    val address: Address?,
+    val phone: String?,
+    val website: String?,
+    val company: Company?,
+    val imgUrl: String = "https://randomuser.me/api/portraits/women/11.jpg"
 ) {
     override fun toString(): String {
-        return "User(id=$id, name=$name, username=$username, email=$email, address=$address, phone=$phone, website=$website, company=$company)"
+        return "User(id=$id, name=$name, username=$username, email=$email, address=$address, phone=$phone, website=$website, company=$company, imgUrl='$imgUrl')"
     }
+
 }
 
 data class Address(

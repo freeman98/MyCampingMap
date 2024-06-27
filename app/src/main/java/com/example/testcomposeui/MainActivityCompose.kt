@@ -63,7 +63,6 @@ fun MainTopAppBar() {
                     Log.d(TAG, "onNavigationIconClick()")
                 }
             )
-
         }
     ) { paddingValues ->
         // 메인 컨텐츠 영역에 paddingValues를 적용하여 content 컴포저블 호출
@@ -184,6 +183,15 @@ fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun CampDataViewComposePreview() {
+    TestComposeUITheme {
+        val user = User(id = 0, name = "이름", username = "사용자 이름", email = "이메일", address = null, phone = null, website = null, company = null)
+        CampDataView(user = user, onCardClick = {})
+    }
+}
+
 @Composable
 fun CampDataView(user: User, onCardClick: (User) -> Unit) {
     val typography = MaterialTheme.typography
@@ -216,7 +224,7 @@ fun CampDataView(user: User, onCardClick: (User) -> Unit) {
 //                    .clip(CircleShape)
 //                    .background(MyBlue)
 //            )
-            ProfileImg("https://www.w3schools.com/w3css/img_avatar.png")
+            ProfileImg(user.imgUrl)
 
             Column() {
                 user.name?.let {
@@ -237,7 +245,7 @@ fun CampDataView(user: User, onCardClick: (User) -> Unit) {
 }
 
 @Composable
-fun ProfileImg(imgUrl: String, modifier: Modifier = Modifier) {
+fun ProfileImg(imgUrl: String?, modifier: Modifier = Modifier) {
     // 이미지 비트맵
     val bitmap: MutableState<Bitmap?> = remember { mutableStateOf(null) }
 
@@ -246,6 +254,7 @@ fun ProfileImg(imgUrl: String, modifier: Modifier = Modifier) {
         .size(50.dp, 50.dp)
 //        .clip(RoundedCornerShape(10.dp)) //이미지 모서리 라운드
         .clip(CircleShape)  //이미지 원형
+
 
     //이미지 관리 라이브러리.
     Glide.with(LocalContext.current)
@@ -394,4 +403,3 @@ fun MyTopBarComposePreview() {
 //        OnboardingScreen(onContinueClicked = {})
 //    }
 //}
-

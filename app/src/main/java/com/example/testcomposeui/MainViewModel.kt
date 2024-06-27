@@ -22,10 +22,13 @@ class MainViewModel: BaseViewModel(){
     }
 
     private fun fetchUsers() {
+        Log.d(TAG, "fetchUsers()")
+        // 코루틴을 사용하여 API 호출
         viewModelScope.launch {
             try {
                 val response = RetrofitInstance.api.getUsers()
                 if (response.isSuccessful) {
+                    // API 호출 성공
                     val userList = response.body() ?: emptyList()
                     for (user in userList) {
                         Log.d(TAG, user.toString())
@@ -33,9 +36,11 @@ class MainViewModel: BaseViewModel(){
                     _users.value = userList
                 } else {
                     // Handle HTTP error
+                    Log.e(TAG, "API 호출 실패: ${response.code()}")
                 }
             } catch (e: Exception) {
                 // Handle exceptions
+                Log.e(TAG, "API 호출 실패: ${e.message}")
             }
         }
     }
