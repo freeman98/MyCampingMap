@@ -59,8 +59,11 @@ dependencies {
     implementation (libs.github.glide)
     implementation(libs.androidx.runtime.livedata)  //이미치 저리 관련.
     annotationProcessor (libs.compiler)
-    implementation ("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation ("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation ("com.squareup.retrofit2:adapter-rxjava3:2.9.0")
+    implementation ("io.reactivex.rxjava3:rxjava:3.1.3")
+    implementation ("io.reactivex.rxjava3:rxandroid:3.0.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
