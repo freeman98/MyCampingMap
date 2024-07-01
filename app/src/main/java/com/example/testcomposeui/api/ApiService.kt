@@ -1,10 +1,10 @@
 package com.example.testcomposeui.api
 
 import com.example.testcomposeui.data.User
-import retrofit2.Response
+import io.reactivex.rxjava3.core.Single
 import retrofit2.http.GET
 
 interface ApiService {
     @GET("users")
-    suspend fun getUsers(): Response<List<User>>
+    fun getUsers(): Single<List<User>>
 }
