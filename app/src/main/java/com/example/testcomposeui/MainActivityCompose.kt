@@ -33,6 +33,7 @@ import androidx.compose.material3.SmallTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -166,8 +167,13 @@ fun CustomSmallTopAppBar(
 @Composable
 //fun CampDataListView(modifier: Modifier = Modifier, campDatas: List<CampData>) {
 fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel = viewModel()) {
+    Log.d(TAG, "CampDataListView()")
     val context = LocalContext.current
     val users = mainViewModel.users.observeAsState(initial = emptyList()).value
+//    LaunchedEffect(Unit) {    //최초1회만 실행됨.
+    LaunchedEffect(users) { //users값이 변경될때 블럭이 실행됨.
+        mainViewModel.fetchUsers()
+    }
 
     //메모리 관리가 들어간 LazyColumn
     LazyColumn(modifier = modifier.padding(vertical = 14.dp /*상하 패딩.*/)) {

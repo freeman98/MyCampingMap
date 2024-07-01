@@ -12,7 +12,7 @@ data class User(
     val phone: String?,
     val website: String?,
     val company: Company?,
-    val imgUrl: String = "https://randomuser.me/api/portraits/women/11.jpg"
+    var imgUrl: String = "https://randomuser.me/api/portraits/women/11.jpg"
 ) {
     override fun toString(): String {
         return "User(id=$id, name=$name, username=$username, email=$email, address=$address, phone=$phone, website=$website, company=$company, imgUrl='$imgUrl')"

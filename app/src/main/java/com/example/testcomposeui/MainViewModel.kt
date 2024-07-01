@@ -19,9 +19,9 @@ class MainViewModel: BaseViewModel(){
     private val _users = MutableLiveData<List<User>>()
     val users: LiveData<List<User>> = _users
 
-    init {
-        fetchUsers()
-    }
+//    init {
+//        fetchUsers()
+//    }
 
     fun fetchUsers() {
         val disposable = RetrofitInstance.api.getUsers()
