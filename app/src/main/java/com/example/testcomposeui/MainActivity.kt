@@ -1,5 +1,7 @@
 package com.example.testcomposeui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,9 +10,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.app.ActivityCompat
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
+import com.google.android.gms.maps.MapFragment
 
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        open val LOCATION_PERMISSION_REQUEST_CODE = 777
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -25,6 +34,21 @@ class MainActivity : ComponentActivity() {
                 }
 
             }
+        }
+
+        checkPermission()
+    }
+
+    private fun checkPermission() {
+        // 위치 권한 확인 및 현재 위치 버튼 활성화 (필요한 경우)
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
         }
     }
 }

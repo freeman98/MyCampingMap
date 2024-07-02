@@ -52,7 +52,7 @@ android {
 
 dependencies {
     implementation (libs.lifecycle.viewmodel.compose)
-    implementation (libs.play.services.maps)
+//    implementation (libs.play.services.maps)
     implementation (libs.play.services.location)
     implementation (libs.places)
     implementation (libs.androidx.material)
@@ -64,6 +64,7 @@ dependencies {
     implementation ("com.squareup.retrofit2:adapter-rxjava3:2.9.0")
     implementation ("io.reactivex.rxjava3:rxjava:3.1.3")
     implementation ("io.reactivex.rxjava3:rxandroid:3.0.0")
+    implementation ("com.google.android.gms:play-services-maps:19.0.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

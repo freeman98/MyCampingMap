@@ -6,15 +6,12 @@ import com.google.android.libraries.places.api.Places
 
 class MyApplication : Application() {
 
-    init {
-        instance = this
+    companion object {
+        lateinit var context: MyApplication
     }
 
-    companion object {
-        private lateinit var instance: MyApplication
-
-        val context: Context
-            get() = instance.applicationContext
+    init {
+        context = this
     }
 
     override fun onCreate() {
