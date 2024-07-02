@@ -6,9 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Observer
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
 
 class MapActivity : ComponentActivity() {
@@ -23,11 +21,12 @@ class MapActivity : ComponentActivity() {
 
         setContent {
             TestComposeUITheme {
-                val context = LocalContext.current
-                val mapViewModel: MapViewModel = viewModel(
-                    factory = MapViewModelFactory(context)
-                )
-                MapScreen(mapViewModel)
+//                val context = LocalContext.current
+//                val mapViewModel: MapViewModel = viewModel(
+//                    factory = MapViewModelFactory(context)
+//                )
+//                MapScreen(mapViewModel)
+                MapScreen()
 
             }
         }

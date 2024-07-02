@@ -10,7 +10,7 @@ class MapViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MapViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MapViewModel(context) as T
+            return MapViewModel() as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
