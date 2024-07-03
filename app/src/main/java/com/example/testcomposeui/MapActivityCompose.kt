@@ -14,6 +14,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -32,7 +33,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 val TAG = "MapActivityCompose"
 
 @Composable
-fun MapScreen() {
+fun MapScreen(viewModel: MapViewModel) {
     Log.d(TAG, "MapScreen()")
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -47,6 +48,7 @@ fun MapScreen() {
             SearchBox(onSearch = { searchText ->
                 // 검색어를 사용하여 검색 수행
                 Log.d(TAG, "검색어: $searchText")
+                viewModel.searchPlace(searchText)
             })
         }
     }
@@ -94,10 +96,13 @@ fun MapView(mapViewModel: MapViewModel = viewModel()) {
     val googleMap by mapViewModel.googleMap.observeAsState()
     //내 위치.
     val currentLocation by mapViewModel.currentLocation.observeAsState()
+    //지도에 표시될 Place 리스트.
+    val places by mapViewModel.places.observeAsState()
 
     AndroidView(
         factory = { context ->
             MapView(context).apply {
+                Log.d(TAG, "AndroidView onCreate()")
                 onCreate(null)
                 onResume()
                 getMapAsync(OnMapReadyCallback { googleMap ->
@@ -111,9 +116,20 @@ fun MapView(mapViewModel: MapViewModel = viewModel()) {
 
     googleMap?.let { map ->
         //현재 위치가 있을경우.
-        currentLocation?.let { myLocation ->
-            //현재 위치로 카메라 이동.
-            mapViewModel.setMyLocationMarker(myLocation)
+        LaunchedEffect(currentLocation) {
+            currentLocation?.let { myLocation ->
+                //현재 위치로 카메라 이동.
+                mapViewModel.setMyLocationMarker(myLocation)
+            }
+        }
+
+        //지도에 표시될 Place 리스트가 있을경우.
+        LaunchedEffect(places) {
+            places?.let {
+                //지도에 표시될 Place 리스트가 있을경우.
+                for (place in it) Log.d(TAG, "place = $place")
+                mapViewModel.setCampingDataPlaces(places)
+            }
         }
     }
 }
@@ -122,7 +138,7 @@ fun MapView(mapViewModel: MapViewModel = viewModel()) {
 @Composable
 fun MapScreenPreview() {
     TestComposeUITheme {
-        MapScreen()
+        MapScreen(viewModel())
     }
 }
 
