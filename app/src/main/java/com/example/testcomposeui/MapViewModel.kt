@@ -1,14 +1,11 @@
 package com.example.testcomposeui
 
-import android.Manifest
 import android.content.ContentValues.TAG
 import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.location.Location
 import android.util.Log
-import androidx.core.app.ActivityCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.testcomposeui.utils.MyLocation
@@ -32,8 +29,10 @@ class MapViewModel(context: Context) : BaseViewModel() {
         const val DEFAULT_ZOOM_LEVEL: Float = 15F
         val SEOUL_LATLNG = LatLng(37.5665, 126.9780) // 서울의 좌표
         private val placesClient: PlacesClient = Places.createClient(MyApplication.context)
+
         //지도 검색 타입 캠핑장.
         val typeList = listOf("campground")
+
         //검색될 필드.
         val placeFields = listOf(
             Place.Field.ID,
@@ -50,11 +49,12 @@ class MapViewModel(context: Context) : BaseViewModel() {
     }
 
     // 마커를 저장할 리스트
-    var markerMap = HashMap<Marker, Place>()
+    private var _markerPlaceMap = MutableLiveData<MutableMap<Marker, Place>>()
+    val markerPlaceMap get() = _markerPlaceMap
 
     //지도에 표시될 Place 리스트
-    private val _places = MutableLiveData<List<Place>>()
-    val places: LiveData<List<Place>> get() = _places
+//    private val _places = MutableLiveData<List<Place>>()
+//    val places: LiveData<List<Place>> get() = _places
 
 
     //내 위치 마커.
@@ -108,12 +108,29 @@ class MapViewModel(context: Context) : BaseViewModel() {
         map.setOnMapClickListener { latLng ->
             Log.d(TAG, "setOnMapClickListener() latLng = $latLng")
             //placesClient을 이용하여 클릭한 지도 근방의 지도 정보를 가져온다.
-            searchNearbyPlaces(latLng) {
+            searchNearbyPlaces(latLng) { places ->
 //                Log.d(TAG, "searchNearbyPlaces() = $it")
-                _places.value = it
+                removeAllMarkers()
+                addMapMarkers(places)
             }
         }
 
+        map.setOnInfoWindowClickListener {marker ->
+            val place = _markerPlaceMap.value?.get(marker)
+            Log.d(TAG, "OnInfoWindowClickListener() $place")
+        }
+
+    }
+
+    private fun addMapMarkers(places: List<Place>?) {
+        val map = mutableMapOf<Marker, Place>()
+        places?.forEach { place ->
+            val markerOption = createMarkerOptions(place.latLng, place.name, place.address, R.drawable.ic_location_transparent)
+            _googleMap.value?.addMarker(markerOption)?.let { marker ->
+                map.put(marker, place)
+            }
+        }
+        _markerPlaceMap.value = map
     }
 
     private fun myCurrentLocation(onResult: (Boolean, String, String) -> Unit) {
@@ -129,9 +146,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
                 val latlng = LatLng(mylocation.latitude, mylocation.longitude)
                 latlng.let { latlng ->
                     //내위치 마커 옵션.
-                    val myMarkerOptions = createMarkerOptions(
-                        latlng, "You are here", null, android.R.drawable.ic_menu_mylocation
-                    )
+                    val myMarkerOptions = createMarkerOptions(latlng, "You are here", null, android.R.drawable.ic_menu_mylocation)
 
                     myCurrentMarker?.let { marker ->
                         //null 아니면 내 위치 마커를 초기화 한다
@@ -141,12 +156,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
 
                     val map = _googleMap.value
                     myCurrentMarker = map?.addMarker(myMarkerOptions) //내위치 마커 추가.
-                    map?.animateCamera(
-                        CameraUpdateFactory.newLatLngZoom(
-                            latlng,
-                            DEFAULT_ZOOM_LEVEL
-                        )
-                    )
+                    map?.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, DEFAULT_ZOOM_LEVEL))
                 }
 
             } else {
@@ -184,11 +194,14 @@ class MapViewModel(context: Context) : BaseViewModel() {
     }
 
     fun searchText(text: String, onResult: (List<Place>?) -> Unit) {
+        //캠핑장 이름 검색.
+        val LantLng = _googleMap.value?.cameraPosition?.target
+        val bounds = CircularBounds.newInstance(LantLng, calculateRadiusInMeters())
         val request = SearchByTextRequest.builder(text, placeFields)
+            .setLocationBias(bounds)
             .setIncludedType("campground")
             .build()
-
-            placesClient.searchByText(request)
+        placesClient.searchByText(request)
             .addOnSuccessListener { response ->
                 onResult(response.places)
 
@@ -198,17 +211,8 @@ class MapViewModel(context: Context) : BaseViewModel() {
             }
     }
 
-    //특정 좌표를 중심으로 5000미터 내에 있는 장소를 검색하는 함수
-    fun searchNearbyPlaces(latLng: LatLng, onResult:(List<Place>?) -> Unit) {
-        if (ActivityCompat.checkSelfPermission(MyApplication.context, Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(MyApplication.context, Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            //권한이 없을 경우 리턴.
-            onResult(null)
-        }
-
+    //특정 좌표를 중심으로 화면에 보이는 대략정인 범위 내에 있는 캠핑장 검색하는 함수
+    fun searchNearbyPlaces(latLng: LatLng, onResult: (List<Place>?) -> Unit) {
         val bounds = CircularBounds.newInstance(latLng, calculateRadiusInMeters())
         val request = SearchNearbyRequest.builder(bounds, placeFields)
             .setIncludedPrimaryTypes(typeList)
@@ -248,34 +252,36 @@ class MapViewModel(context: Context) : BaseViewModel() {
     // 모든 마커를 삭제하는 함수
     fun removeAllMarkers() {
         Log.d(TAG, "removeAllMarkers()")
-        if(markerMap.size == 0) return
-        for ( marker in markerMap.keys) {
-            marker.remove()
+        _markerPlaceMap.value?.let { map ->
+            if (map.isEmpty()) return
+            for (marker in map.keys) {
+                marker.remove()
+            }
+            map.clear()
         }
-        markerMap.clear()
     }
 
-    fun setCampingDataPlaces(places: List<Place>?) {
-        places?.let {
-            removeAllMarkers()
-            for (place in it) {
+    fun gotoFastPlace(map: MutableMap<Marker, Place>) {
+        //첫번쨰 장소로 지도 이동.
+        Log.d(TAG, "gotoFastPlace()")
+        var count = 0
+        map.let {
+            it.forEach { (marker, place) ->
                 val latLng = place.latLng
-                val markerOption = createMarkerOptions(latLng, place.name, place.address,  R.drawable.ic_location_transparent)
-                if (latLng != null) {
-//                        Log.i("MapViewModel", "Place found: NAME=${place.name}, PRIMARY_TYPE=${place.primaryType}, PLACE_TYPES=${place.placeTypes}, ADDRESS=${place.address}, ${latLng.latitude}, ${latLng.longitude}")
-                    // 지도에 마커 추가 및 카메라 이동
-                    _googleMap.value?.addMarker(markerOption)?.let { markerMap.put(it, place) }
+                if (count++ == 0) {
+                    _googleMap.value?.animateCamera(CameraUpdateFactory.newLatLng(latLng))
+                    return@forEach
                 }
             }
         }
-
     }
 
     //검색 버튼.
     fun searchPlace(searchText: String) {
         Log.d(TAG, "searchPlac() = $searchText")
-        searchText(searchText) {
-            _places.value = it
+        searchText(searchText) { places ->
+            removeAllMarkers()
+            addMapMarkers(places)
         }
     }
 
