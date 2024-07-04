@@ -26,7 +26,7 @@ import kotlin.math.pow
 class MapViewModel(context: Context) : BaseViewModel() {
 
     companion object {
-        const val DEFAULT_ZOOM_LEVEL: Float = 15F
+        const val DEFAULT_ZOOM_LEVEL: Float = 13F
         val SEOUL_LATLNG = LatLng(37.5665, 126.9780) // 서울의 좌표
         private val placesClient: PlacesClient = Places.createClient(MyApplication.context)
 
@@ -128,8 +128,8 @@ class MapViewModel(context: Context) : BaseViewModel() {
             }
         }
 
-        //지도 터치 이벤트
-        map.setOnMapClickListener { latLng ->
+        //지도 롱터치 이벤트 - 해당 터치 위치를 중심으로 대략적인 화면 범위 내에 있는 캠핑장 검색.
+        map.setOnMapLongClickListener { latLng ->
             Log.d(TAG, "setOnMapClickListener() latLng = $latLng")
             //placesClient을 이용하여 클릭한 지도 근방의 지도 정보를 가져온다.
             searchNearbyPlaces(latLng) { places ->
@@ -217,7 +217,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
         }
     }
 
-    fun searchText(text: String, onResult: (List<Place>?) -> Unit) {
+    private fun searchText(text: String, onResult: (List<Place>?) -> Unit) {
         //캠핑장 이름 검색.
         val LantLng = _googleMap.value?.cameraPosition?.target
         val bounds = CircularBounds.newInstance(LantLng, calculateRadiusInMeters())
@@ -236,7 +236,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
     }
 
     //특정 좌표를 중심으로 화면에 보이는 대략정인 범위 내에 있는 캠핑장 검색하는 함수
-    fun searchNearbyPlaces(latLng: LatLng, onResult: (List<Place>?) -> Unit) {
+    private fun searchNearbyPlaces(latLng: LatLng, onResult: (List<Place>?) -> Unit) {
         val bounds = CircularBounds.newInstance(latLng, calculateRadiusInMeters())
         val request = SearchNearbyRequest.builder(bounds, placeFields)
             .setIncludedPrimaryTypes(typeList)
@@ -253,7 +253,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
     }
 
     // 지도의 넓이를 계산하는 함수
-    fun calculateRadiusInMeters(): Double {
+    private fun calculateRadiusInMeters(): Double {
         _googleMap.value?.let { map ->
             val zoomLevel = map.cameraPosition.zoom
             val mapWidthInPixels = MyApplication.context.resources.displayMetrics.widthPixels
@@ -271,7 +271,6 @@ class MapViewModel(context: Context) : BaseViewModel() {
         }
         return 0.0
     }
-
 
     // 모든 마커를 삭제하는 함수
     fun removeAllMarkers() {
@@ -310,9 +309,10 @@ class MapViewModel(context: Context) : BaseViewModel() {
     }
 
     fun setSearchListVisible(visible: Boolean) {
-        if (_placesList.value.isNullOrEmpty()) {
-            _isSearchListVisible.value = visible
-        }
+        _isSearchListVisible.value = visible
     }
 
+    fun getMarkerCount(): Int {
+        return _markerPlaceMap.value?.size ?: 0
+    }
 }
