@@ -41,16 +41,40 @@ class MapViewModel(context: Context) : BaseViewModel() {
             Place.Field.PRIMARY_TYPE,
             Place.Field.PHONE_NUMBER,
             Place.Field.ICON_URL,
+            Place.Field.ICON_BACKGROUND_COLOR,
             Place.Field.REVIEWS,
             Place.Field.ADDRESS,
-            Place.Field.LAT_LNG
+            Place.Field.LAT_LNG,
+            Place.Field.ADDRESS_COMPONENTS,
+            Place.Field.BUSINESS_STATUS,
+            Place.Field.CURBSIDE_PICKUP,
+            Place.Field.OPENING_HOURS,
+            Place.Field.PRICE_LEVEL,
+            Place.Field.RATING,
+            Place.Field.USER_RATINGS_TOTAL,
+            Place.Field.DELIVERY,
+            Place.Field.DINE_IN,
+            Place.Field.EDITORIAL_SUMMARY,
+            Place.Field.PHOTO_METADATAS
         )
 
     }
 
+    private val _isSearchListVisible = MutableLiveData<Boolean>()
+    val isSearchListVisible get() = _isSearchListVisible
+
     // 마커를 저장할 리스트
     private var _markerPlaceMap = MutableLiveData<MutableMap<Marker, Place>>()
     val markerPlaceMap get() = _markerPlaceMap
+
+    private val _placesList = MutableLiveData<List<Place>>()
+    val placesList: LiveData<List<Place>> get() = _placesList
+
+    init {
+        _markerPlaceMap.observeForever { markerPlaceMap ->
+            _placesList.value = markerPlaceMap.values.toList()
+        }
+    }
 
     //지도에 표시될 Place 리스트
 //    private val _places = MutableLiveData<List<Place>>()
@@ -61,10 +85,10 @@ class MapViewModel(context: Context) : BaseViewModel() {
     private var myCurrentMarker: Marker? = null
 
     //내 위치.
-    private val _currentLocation = MutableLiveData<Location?>()
-    val currentLocation: LiveData<Location?> get() = _currentLocation
+    private val _currentMyLocation = MutableLiveData<Location?>()
+    val currentMyLocation: LiveData<Location?> get() = _currentMyLocation
     fun setCurrentLocation(location: Location) {
-        _currentLocation.value = location
+        _currentMyLocation.value = location
     }
 
     private val _googleMap = MutableLiveData<GoogleMap?>()
@@ -142,11 +166,11 @@ class MapViewModel(context: Context) : BaseViewModel() {
                     this.latitude = latitude.toDouble()
                     this.longitude = longitude.toDouble()
                 }
-                _currentLocation.value = mylocation
+                _currentMyLocation.value = mylocation
                 val latlng = LatLng(mylocation.latitude, mylocation.longitude)
-                latlng.let { latlng ->
+                latlng.let {
                     //내위치 마커 옵션.
-                    val myMarkerOptions = createMarkerOptions(latlng, "You are here", null, android.R.drawable.ic_menu_mylocation)
+                    val myMarkerOptions = createMarkerOptions(it, "You are here", null, android.R.drawable.ic_menu_mylocation)
 
                     myCurrentMarker?.let { marker ->
                         //null 아니면 내 위치 마커를 초기화 한다
@@ -156,7 +180,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
 
                     val map = _googleMap.value
                     myCurrentMarker = map?.addMarker(myMarkerOptions) //내위치 마커 추가.
-                    map?.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, DEFAULT_ZOOM_LEVEL))
+                    map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it, DEFAULT_ZOOM_LEVEL))
                 }
 
             } else {
@@ -261,7 +285,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
         }
     }
 
-    fun gotoFastPlace(map: MutableMap<Marker, Place>) {
+    fun gotoFirstPlace(map: MutableMap<Marker, Place>) {
         //첫번쨰 장소로 지도 이동.
         Log.d(TAG, "gotoFastPlace()")
         var count = 0
@@ -282,6 +306,12 @@ class MapViewModel(context: Context) : BaseViewModel() {
         searchText(searchText) { places ->
             removeAllMarkers()
             addMapMarkers(places)
+        }
+    }
+
+    fun setSearchListVisible(visible: Boolean) {
+        if (_placesList.value.isNullOrEmpty()) {
+            _isSearchListVisible.value = visible
         }
     }
 

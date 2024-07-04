@@ -178,7 +178,7 @@ fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel
     //메모리 관리가 들어간 LazyColumn
     LazyColumn(modifier = modifier.padding(vertical = 14.dp /*상하 패딩.*/)) {
         items(users) {
-            CampDataView(it, onCardClick = { user ->
+            CampDataViewCard(it, onCardClick = { user ->
                 Log.d(TAG, "onCardClick() $user")
                 // User 데이터 발행
                 BaseViewModel.LiveDataBus._selectUser.postValue(user)
@@ -191,23 +191,23 @@ fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel
 
 @Preview(showBackground = true)
 @Composable
-fun CampDataViewComposePreview() {
+fun CampDataViewCardPreview() {
     TestComposeUITheme {
         val user = User(id = 0, name = "이름", username = "사용자 이름", email = "이메일", address = null, phone = null, website = null, company = null)
-        CampDataView(user = user, onCardClick = {})
+        CampDataViewCard(user = user, onCardClick = {})
     }
 }
 
 @Composable
-fun CampDataView(user: User, onCardClick: (User) -> Unit) {
+fun CampDataViewCard(user: User, onCardClick: (User) -> Unit) {
     val typography = MaterialTheme.typography
     val elevation = CardDefaults.cardElevation(
-        defaultElevation = 10.dp
+        defaultElevation = 0.dp
     )
 
     Card(
         modifier = Modifier
-            .clickable(onClick = { onCardClick(user) })
+            .clickable(onClick = { onCardClick(user) }) //카드 클릭 이벤트.
             .fillMaxWidth()     //가로 전체 화면 다쓴다.
             .padding(10.dp),    //카드간 간격.
         shape = RoundedCornerShape(12.dp),

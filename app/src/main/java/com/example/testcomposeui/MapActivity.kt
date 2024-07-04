@@ -32,7 +32,11 @@ class MapActivity : ComponentActivity() {
                 val viewModel: MapViewModel = viewModel(
                     factory = MapViewModelFactory(context)
                 )
-                MapScreen(viewModel)
+                MapScreen(viewModel) {
+                    //앱 종료
+                    Log.d(TAG, "MapActivity onBackPressed()")
+                    finish()
+                }
             }
         }
 
