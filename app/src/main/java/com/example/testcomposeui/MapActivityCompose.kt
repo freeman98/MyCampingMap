@@ -21,10 +21,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -77,6 +81,13 @@ fun MapScreen(viewModel: MapViewModel, onBackPressed: () -> Unit) {
         ) {
             //지도 그리기.
             MapView()
+            //내 위치로 가기 버튼
+            MyLocationButton(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(5.dp),
+                onClick = {viewModel.gotoMyLocation()}
+            )
             //상단 검색.
             SearchBox(onSearch = { searchText ->
                     // 검색어를 사용하여 검색 수행
@@ -87,9 +98,32 @@ fun MapScreen(viewModel: MapViewModel, onBackPressed: () -> Unit) {
                     onBackPressed()
                 }
             )
+
         }
     }
 
+}
+
+@Composable
+fun MyLocationButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    //내 위치로 가기 버튼
+    FloatingActionButton(
+        onClick = {onClick()},
+        modifier = modifier
+    ) {
+        Icon(
+            imageVector = Icons.Default.Home,
+            contentDescription = "My Location"
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MyLocationButtonPreview() {
+    TestComposeUITheme {
+        MyLocationButton(onClick = {})
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,8 +148,12 @@ fun SearchBox(onSearch: (String) -> Unit, onBackPressed: () -> Unit, mapViewMode
             onClick = {
                 //리스트 아이콘 클릭시.
                 Log.d(TAG, "SearchBox() onListButton()")
-                if(mapViewModel.getMarkerCount() != 0)
+                if(mapViewModel.getMarkerCount() != 0) {
                     mapViewModel.setSearchListVisible(!isSearchListVisible)
+                } else {
+                    //마커가 없을경우.
+                    if(isSearchListVisible) mapViewModel.setSearchListVisible(false)
+                }
             }
         ) {
             Image(
@@ -171,7 +209,7 @@ fun SearchBox(onSearch: (String) -> Unit, onBackPressed: () -> Unit, mapViewMode
 @Composable
 fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = viewModel(), onBackPressed: () -> Unit) {
     Log.d(TAG, "serchListView()")
-    //지도에 표시될 Place map.
+    //지도에 표시될 Place list.
     val placesList = mapViewModel.placesList.observeAsState(initial = emptyList()).value
     //검색창이 보이지 않으면 false 보이면 true
     val isSearchListVisible = mapViewModel.isSearchListVisible.observeAsState(false).value
@@ -211,7 +249,14 @@ fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = v
     }
 
     //검색창이 보이지 않으면 리턴.
-    if (!isSearchListVisible) return
+    if (!isSearchListVisible) {
+        return
+    } else {
+        //검색창이 보이지만 리스트가 없다면 검색창 닫기.
+        if(placesList.isEmpty()) {
+            mapViewModel.setSearchListVisible(false)
+        }
+    }
 
     //메모리 관리가 들어간 LazyColumn
     Box(
@@ -282,8 +327,8 @@ fun SearchListViewPreview() {
 fun MapView(mapViewModel: MapViewModel = viewModel()) {
     Log.d(TAG, "MapView()")
     val googleMap by mapViewModel.googleMap.observeAsState()
-    //내 위치.
-    val currentLocation by mapViewModel.currentMyLocation.observeAsState()
+    //내 현재 위치 - 현재 위치를 기억 하기 위해 LiveDataBus 사용.
+    val currentLocation by BaseViewModel.LiveDataBus.currentMyLocation.observeAsState()
     //지도에 표시될 Place map.
     val markerPlaceMap by mapViewModel.markerPlaceMap.observeAsState()
 
@@ -311,9 +356,9 @@ fun MapView(mapViewModel: MapViewModel = viewModel()) {
             }
         }
 
-        //지도에 표시될 Place 리스트가 있을경우.
+        //지도에 표시될 Places 리스트가 있을경우 만 실행.
         LaunchedEffect(markerPlaceMap) {
-            markerPlaceMap?.let { mapViewModel.gotoFirstPlace(it) }
+            markerPlaceMap?.let {mapViewModel.gotoFirstPlace(it)}
         }
     }
 }

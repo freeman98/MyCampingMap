@@ -1,13 +1,21 @@
 package com.example.testcomposeui
 
+import android.Manifest
 import android.content.ContentValues.TAG
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.location.Location
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.TextView
+import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.example.testcomposeui.MyApplication.Companion.context
 import com.example.testcomposeui.utils.MyLocation
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -84,12 +92,10 @@ class MapViewModel(context: Context) : BaseViewModel() {
     //내 위치 마커.
     private var myCurrentMarker: Marker? = null
 
-    //내 위치.
-    private val _currentMyLocation = MutableLiveData<Location?>()
-    val currentMyLocation: LiveData<Location?> get() = _currentMyLocation
-    fun setCurrentLocation(location: Location) {
-        _currentMyLocation.value = location
-    }
+
+//    fun setCurrentLocation(location: Location) {
+//        _currentMyLocation.value = location
+//    }
 
     private val _googleMap = MutableLiveData<GoogleMap?>()
     val googleMap: LiveData<GoogleMap?> get() = _googleMap
@@ -101,6 +107,12 @@ class MapViewModel(context: Context) : BaseViewModel() {
         //초기 위치. 설정 및 카메라 이동.
         map.mapType = GoogleMap.MAP_TYPE_NORMAL
         val uiSettings = map.uiSettings
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            map.isMyLocationEnabled = true
+        }
+
         // 줌 레벨 설정
         uiSettings.isZoomControlsEnabled = true
         // 컴퍼스 활성화
@@ -118,13 +130,23 @@ class MapViewModel(context: Context) : BaseViewModel() {
         // 모든 제스처 활성화
         uiSettings.setAllGesturesEnabled(true)
 
-        //지도 기본 위치 지정.
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(SEOUL_LATLNG, DEFAULT_ZOOM_LEVEL))
+        //지도 클릭 이벤트.
+        map.setInfoWindowAdapter(CustomInfoWindowAdapter(context))
 
-        myCurrentLocation { isSuccess, latitude, longitude ->
-            if (!isSuccess) {
-                //지도 초기화 떄 실패하면 서울을 기본 좌표로 정한다.
-                map.moveCamera(CameraUpdateFactory.newLatLngZoom(SEOUL_LATLNG, DEFAULT_ZOOM_LEVEL))
+        LiveDataBus._currentMyLocation.value?.let {
+            //저장된 내위치가 있을경우.
+            Log.d(TAG, "currentMyLocation = $it")
+            val latlng = LatLng(it.latitude, it.longitude)
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(latlng, DEFAULT_ZOOM_LEVEL))
+
+        } ?: run {
+            Log.d(TAG, "currentMyLocation = null")
+            //저장된 내위치가 없을경우 - 내 위치 찾기.
+            myCurrentLocation { isSuccess, latitude, longitude ->
+                if (!isSuccess) {
+                    //지도 초기화 떄 실패하면 서울을 기본 좌표로 정한다.
+                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(SEOUL_LATLNG, DEFAULT_ZOOM_LEVEL))
+                }
             }
         }
 
@@ -146,14 +168,44 @@ class MapViewModel(context: Context) : BaseViewModel() {
 
     }
 
+    class CustomInfoWindowAdapter(context: Context) : GoogleMap.InfoWindowAdapter {
+        // 마커 클릭 시 나오는 말풍선
+        private val window: View = LayoutInflater.from(context).inflate(R.layout.custom_info_window, null)
+
+        override fun getInfoWindow(marker: Marker): View? {
+            render(marker, window)
+            return window
+        }
+
+        override fun getInfoContents(marker: Marker): View? {
+            return null
+        }
+
+        private fun render(marker: Marker, view: View) {
+            val title = marker.title
+            val snippet = marker.snippet
+            val place = marker.tag as? Place
+            Log.d(TAG, "render() place.rating = ${place?.rating}")
+
+            val titleUi = view.findViewById<TextView>(R.id.title)
+            titleUi.text = place?.rating?.let {"$title  ${it}/5.0" } ?: title
+
+            val snippetUi = view.findViewById<TextView>(R.id.snippet)
+            snippetUi.text = snippet
+        }
+    }
+
+
     private fun addMapMarkers(places: List<Place>?) {
         val map = mutableMapOf<Marker, Place>()
         places?.forEach { place ->
             val markerOption = createMarkerOptions(place.latLng, place.name, place.address, R.drawable.ic_location_transparent)
             _googleMap.value?.addMarker(markerOption)?.let { marker ->
-                map.put(marker, place)
+                marker.tag = place
+                map[marker] = place
             }
         }
+        if(map.isEmpty()) Toast.makeText(MyApplication.context, "검색 결과가 없습니다.", Toast.LENGTH_SHORT).show()
         _markerPlaceMap.value = map
     }
 
@@ -166,21 +218,21 @@ class MapViewModel(context: Context) : BaseViewModel() {
                     this.latitude = latitude.toDouble()
                     this.longitude = longitude.toDouble()
                 }
-                _currentMyLocation.value = mylocation
+                LiveDataBus._currentMyLocation.value = mylocation
                 val latlng = LatLng(mylocation.latitude, mylocation.longitude)
                 latlng.let {
+
+//                    myCurrentMarker?.let { marker ->
+//                        //null 아니면 내 위치 마커를 초기화 한다
+//                        marker.remove()
+//                        myCurrentMarker = null
+//                    }
+
+//                    val map = _googleMap.value
                     //내위치 마커 옵션.
-                    val myMarkerOptions = createMarkerOptions(it, "You are here", null, android.R.drawable.ic_menu_mylocation)
-
-                    myCurrentMarker?.let { marker ->
-                        //null 아니면 내 위치 마커를 초기화 한다
-                        marker.remove()
-                        myCurrentMarker = null
-                    }
-
-                    val map = _googleMap.value
-                    myCurrentMarker = map?.addMarker(myMarkerOptions) //내위치 마커 추가.
-                    map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it, DEFAULT_ZOOM_LEVEL))
+//                    val myMarkerOptions = createMarkerOptions(it, "You are here", null, android.R.drawable.ic_menu_mylocation)
+//                    myCurrentMarker = map?.addMarker() //내위치 마커 추가.
+                    _googleMap.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(it, DEFAULT_ZOOM_LEVEL))
                 }
 
             } else {
@@ -198,8 +250,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
         snippet: String?,
         marker_id: Int
     ): MarkerOptions {
-        val bitmap: Bitmap =
-            BitmapFactory.decodeResource(MyApplication.context.resources, marker_id)
+        val bitmap: Bitmap = BitmapFactory.decodeResource(MyApplication.context.resources, marker_id)
         return MarkerOptions()
             .position(position)
             .title(title)
@@ -314,5 +365,16 @@ class MapViewModel(context: Context) : BaseViewModel() {
 
     fun getMarkerCount(): Int {
         return _markerPlaceMap.value?.size ?: 0
+    }
+
+    fun gotoMyLocation() {
+        //내 위치로 이동.
+        myCurrentLocation { isSuccess, latitude, longitude ->
+            if (!isSuccess) {
+                //지도 초기화 떄 실패하면 서울을 기본 좌표로 정한다.
+                Toast.makeText(MyApplication.context, "내 위치를 찾을 수 없습니다.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
     }
 }
