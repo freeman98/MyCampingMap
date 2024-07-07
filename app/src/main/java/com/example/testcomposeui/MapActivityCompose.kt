@@ -6,8 +6,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -272,6 +272,8 @@ fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = v
                     place,
                     onCardClick = { selectPlace ->
                         Log.d(TAG, "onCardClick() $selectPlace")
+                        mapViewModel.gotoPlace(selectPlace)
+                        mapViewModel.setSearchListVisible(false)
                     }
                 )
             }
@@ -294,20 +296,34 @@ fun SerchListViewCard (place: Place, onCardClick: (Place) -> Unit) {
             .padding(10.dp),    //카드간 간격.
         elevation = elevation   //그림자 영역 지정.
     ) {
-        Row(
+        Column(
             /*
             - horizontalArrangement Arrangement = 요소를 어떤식으로 배열할지 설정, Start, End, Center 만 존재.
              */
-            modifier = Modifier.padding(10.dp), //패징값.
-            verticalAlignment = Alignment.Bottom, //세로 정렬 설정.
-            horizontalArrangement = Arrangement.spacedBy(10.dp) //가로 간격 설정.
+            modifier = Modifier.padding(10.dp) //패징값.
         ) {
             place.name?.let {
-                Text(
-                    text = it,
-                    style = typography.titleLarge
-                )
+                Text(text = it, style = typography.titleLarge)
             }
+            place.address?.let {
+                Text(text = "- 주소 : $it", style = typography.bodyMedium)
+            }
+            place.phoneNumber?.let {
+                Text(text = "- 전화 : $it", style = typography.bodyMedium)
+            }
+            place.websiteUri?.let {
+                Text(text = "- 사이트 : $it", style = typography.bodyMedium)
+            }
+            place.rating?.let {
+                Text(text = "- 별점 : $it (${place.userRatingsTotal})", style = typography.bodyMedium)
+            }
+            place.priceLevel?.let {
+                Text(text = "- 가격 : $it", style = typography.bodyMedium)
+            }
+            place.reviews?.let {
+                Text(text = "- 리뷰 : ${it.size}", style = typography.bodyMedium)
+            }
+
         }
 
     }

@@ -63,7 +63,8 @@ class MapViewModel(context: Context) : BaseViewModel() {
             Place.Field.DELIVERY,
             Place.Field.DINE_IN,
             Place.Field.EDITORIAL_SUMMARY,
-            Place.Field.PHOTO_METADATAS
+            Place.Field.PHOTO_METADATAS,
+            Place.Field.WEBSITE_URI
         )
 
     }
@@ -169,7 +170,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
     }
 
     class CustomInfoWindowAdapter(context: Context) : GoogleMap.InfoWindowAdapter {
-        // 마커 클릭 시 나오는 말풍선
+        // 마커 클릭 시 나오는 말풍선 커스텀
         private val window: View = LayoutInflater.from(context).inflate(R.layout.custom_info_window, null)
 
         override fun getInfoWindow(marker: Marker): View? {
@@ -375,6 +376,13 @@ class MapViewModel(context: Context) : BaseViewModel() {
                 Toast.makeText(MyApplication.context, "내 위치를 찾을 수 없습니다.", Toast.LENGTH_SHORT).show()
             }
         }
+    }
 
+    fun gotoPlace(place: Place?) {
+        Log.d(TAG, "gotoPlace()")
+        //파라미터로 넘어오는 Place를 기준으로 지도 이동.
+        place?.latLng?.let {
+            _googleMap.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 16f))
+        }
     }
 }

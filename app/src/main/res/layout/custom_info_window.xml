@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:padding="10dp"
     android:elevation="20dp"
-    android:background="@android:color/white"
+    android:background="@drawable/bubble_background"
     >
 
     <LinearLayout
