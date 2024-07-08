@@ -1,7 +1,10 @@
 package com.example.testcomposeui
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,10 +23,13 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -184,6 +191,9 @@ fun SearchBox(onSearch: (String) -> Unit, onBackPressed: () -> Unit, mapViewMode
         Spacer(modifier = Modifier.width(5.dp))
         //검색 버튼.
         Button(
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 10.dp,
+            ),
             onClick = {
                 if(searchText.isNotEmpty()) {
                     onSearch(searchText)
@@ -191,7 +201,9 @@ fun SearchBox(onSearch: (String) -> Unit, onBackPressed: () -> Unit, mapViewMode
                 }
             },
             shape = RectangleShape,
-            modifier = Modifier.align(Alignment.CenterVertically)
+            modifier = Modifier
+                .size(width = 75.dp, height = 55.dp)
+                .align(Alignment.CenterVertically)
         ) {
             Text("검색")
         }
@@ -215,6 +227,8 @@ fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = v
     val isSearchListVisible = mapViewModel.isSearchListVisible.observeAsState(false).value
     //뒤로가기 버튼 눌렀는지 체크. 누르면 true
     val isBackPressed = remember { mutableStateOf(false) }
+    // LazyListState를 기억합니다.
+    val listState = rememberLazyListState()
 
     BackHandler {
         //백키를 눌렀을때
@@ -240,8 +254,8 @@ fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = v
         if(placesList.isNotEmpty()) {
             //검색 결과가 있을경우.
             Log.d(TAG, "placesList.size ${placesList.size}")
-            //검색창이 보이지 않으면 리턴.
-            mapViewModel.setSearchListVisible(true)
+            mapViewModel.setSearchListVisible(true) //검색창 보이게.
+            listState.scrollToItem(0)   //리스트 상단으로 이동.
         } else {
             //검색 결과가 없을경우.
             return@LaunchedEffect
@@ -266,7 +280,9 @@ fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = v
             .background(MaterialTheme.colorScheme.background)
     ) {
         //메모리 관리가 들어간 LazyColumn
-        LazyColumn(modifier = modifier.padding(vertical = 14.dp /*상하 패딩.*/)) {
+        LazyColumn(
+            state = listState,  // LazyListState를 LazyColumn에 전달합니다.
+            modifier = modifier.padding(vertical = 14.dp /*상하 패딩.*/)) {
             items(placesList) { place ->
                 SerchListViewCard(
                     place,
@@ -309,10 +325,24 @@ fun SerchListViewCard (place: Place, onCardClick: (Place) -> Unit) {
                 Text(text = "- 주소 : $it", style = typography.bodyMedium)
             }
             place.phoneNumber?.let {
-                Text(text = "- 전화 : $it", style = typography.bodyMedium)
+//                Text(text = "- 전화 : $it", style = typography.bodyMedium)
+                //전화 번호 앞자리 치환.
+                val phoneNumber = it.replaceFirst("+82 ", "0")
+                ClickableText(text = AnnotatedString("- 전화 : $phoneNumber"),
+                    style = typography.bodyMedium,
+                    onClick = {
+                        Log.d(TAG, "SerchListViewCard() onClick: $phoneNumber")
+                        callPhone(phoneNumber)
+                })
             }
-            place.websiteUri?.let {
-                Text(text = "- 사이트 : $it", style = typography.bodyMedium)
+            place.websiteUri?.let {uri ->
+//                Text(text = "- 사이트 : $it", style = typography.bodyMedium)
+                ClickableText(text = AnnotatedString("- 사이트 : $uri"),
+                    style = typography.bodyMedium,
+                    onClick = {
+                        Log.d(TAG, "SerchListViewCard() onClick: $uri")
+                        openWebPage(uri)
+                    })
             }
             place.rating?.let {
                 Text(text = "- 별점 : $it (${place.userRatingsTotal})", style = typography.bodyMedium)
@@ -326,6 +356,34 @@ fun SerchListViewCard (place: Place, onCardClick: (Place) -> Unit) {
 
         }
 
+    }
+}
+
+fun openWebPage(uri: Uri) {
+    // 웹 페이지를 열기 위한 Intent 생성
+    Log.d(TAG, "openWebPage() $uri")
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        data = uri
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK // 플래그 추가
+    }
+    try {
+        MyApplication.context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(MyApplication.context, "No app found to open the website", Toast.LENGTH_SHORT).show()
+    }
+}
+
+fun callPhone(phoneNumber: String) {
+    // 전화를 걸기 위한 Intent 생성
+    Log.d(TAG, "callPhone() $phoneNumber")
+    val intent = Intent(Intent.ACTION_DIAL).apply {
+        data = Uri.parse("tel:$phoneNumber")
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK // 플래그 추가
+    }
+    if (intent.resolveActivity(MyApplication.context.packageManager) != null) {
+        MyApplication.context.startActivity(intent)
+    } else {
+        Toast.makeText(MyApplication.context, "No app found to place the call", Toast.LENGTH_SHORT).show()
     }
 
 }

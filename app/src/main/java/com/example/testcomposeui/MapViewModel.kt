@@ -31,7 +31,7 @@ import com.google.android.libraries.places.api.net.SearchByTextRequest
 import com.google.android.libraries.places.api.net.SearchNearbyRequest
 import kotlin.math.pow
 
-class MapViewModel(context: Context) : BaseViewModel() {
+class MapViewModel(_context: Context) : BaseViewModel() {
 
     companion object {
         const val DEFAULT_ZOOM_LEVEL: Float = 13F
@@ -63,7 +63,7 @@ class MapViewModel(context: Context) : BaseViewModel() {
             Place.Field.DELIVERY,
             Place.Field.DINE_IN,
             Place.Field.EDITORIAL_SUMMARY,
-            Place.Field.PHOTO_METADATAS,
+//            Place.Field.PHOTO_METADATAS,
             Place.Field.WEBSITE_URI
         )
 
@@ -89,10 +89,8 @@ class MapViewModel(context: Context) : BaseViewModel() {
 //    private val _places = MutableLiveData<List<Place>>()
 //    val places: LiveData<List<Place>> get() = _places
 
-
     //내 위치 마커.
-    private var myCurrentMarker: Marker? = null
-
+//    private var myCurrentMarker: Marker? = null
 
 //    fun setCurrentLocation(location: Location) {
 //        _currentMyLocation.value = location
@@ -228,7 +226,6 @@ class MapViewModel(context: Context) : BaseViewModel() {
 //                        marker.remove()
 //                        myCurrentMarker = null
 //                    }
-
 //                    val map = _googleMap.value
                     //내위치 마커 옵션.
 //                    val myMarkerOptions = createMarkerOptions(it, "You are here", null, android.R.drawable.ic_menu_mylocation)
@@ -271,8 +268,8 @@ class MapViewModel(context: Context) : BaseViewModel() {
 
     private fun searchText(text: String, onResult: (List<Place>?) -> Unit) {
         //캠핑장 이름 검색.
-        val LantLng = _googleMap.value?.cameraPosition?.target
-        val bounds = CircularBounds.newInstance(LantLng, calculateRadiusInMeters())
+        val latLng = _googleMap.value?.cameraPosition?.target
+        val bounds = latLng?.let { CircularBounds.newInstance(it, calculateRadiusInMeters()) }
         val request = SearchByTextRequest.builder(text, placeFields)
             .setLocationBias(bounds)
             .setIncludedType("campground")
