@@ -60,10 +60,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.testcomposeui.data.CampingSite
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.libraries.places.api.model.Place
+import com.google.firebase.firestore.FirebaseFirestore
 
 val TAG = "MapActivityCompose"
 
@@ -347,16 +349,53 @@ fun SerchListViewCard (place: Place, onCardClick: (Place) -> Unit) {
             place.rating?.let {
                 Text(text = "- 별점 : $it (${place.userRatingsTotal})", style = typography.bodyMedium)
             }
+
+            place.reviews?.let {
+                Text(text = "- 리뷰 : ${it.size}", style = typography.bodyMedium)
+            }
             place.priceLevel?.let {
                 Text(text = "- 가격 : $it", style = typography.bodyMedium)
             }
-            place.reviews?.let {
-                Text(text = "- 리뷰 : ${it.size}", style = typography.bodyMedium)
+            Button(onClick = {
+                saveCampingSite(place)
+            }) {
+                Text(text = "저장")
             }
 
         }
 
     }
+}
+
+fun saveCampingSite(place: Place) {
+    //파이어스토어 데이터베이스에 저장.
+//    Log.d(TAG, "saveCampingSite() place= ${place}")
+    val campingSite = CampingSite(
+        id = place.id?.toString() ?: "",
+        name = place.name?: "",
+        address = place.address?: "",
+        phoneNumber = place.phoneNumber?: "",
+        location = place.latLng?.toString() ?: "",
+        rating = place.rating?.toString() ?: "",
+        reviews = place.reviews?.toString() ?: "",
+        websiteUri = place.websiteUri?.toString() ?: ""
+    )
+    Log.d(TAG, "$campingSite")
+
+    val db = FirebaseFirestore.getInstance()
+    db.collection("my_camping_list")
+        .document(campingSite.id)
+        .set(campingSite)
+        .addOnSuccessListener {
+            // 데이터 저장 성공
+            Log.d(TAG, "addOnSuccessListener()")
+            Toast.makeText(MyApplication.context, "저장 성공", Toast.LENGTH_SHORT).show()
+        }
+        .addOnFailureListener { e ->
+            // 데이터 저장 실패
+            Log.w(TAG, "addOnFailureListener() = ", e)
+            Toast.makeText(MyApplication.context, "저장 실패", Toast.LENGTH_SHORT).show()
+        }
 }
 
 fun openWebPage(uri: Uri) {

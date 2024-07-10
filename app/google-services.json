@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "287683711696",
+    "project_id": "freemancampingmap",
+    "storage_bucket": "freemancampingmap.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:287683711696:android:39d916f0c2bbe59c5e04d5",
+        "android_client_info": {
+          "package_name": "com.example.testcomposeui"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "287683711696-5m16kk9srnvkqjglpq2nm4scapa4rgmr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.testcomposeui",
+            "certificate_hash": "571320ebecd0ee666bdb7c880ffcbdce23a827d6"
+          }
+        },
+        {
+          "client_id": "287683711696-258mj1anujlruli1p7qlv6384fe3h34b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzAmSn4rmv-Bobw0jmPoDL2zW56c4zN9A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "287683711696-258mj1anujlruli1p7qlv6384fe3h34b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

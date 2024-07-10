@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,7 +53,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
-import com.example.testcomposeui.data.User
+import com.example.testcomposeui.data.CampingSite
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
 
 @Composable
@@ -72,8 +74,6 @@ fun MainTopAppBar() {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-//            MapLsit()
-//            CampDataListView(campDatas = CampDummyDataProvider.campList)
             CampDataListView()
         }
     }
@@ -116,75 +116,50 @@ fun CustomSmallTopAppBar(
     )
 }
 
-
-//@Composable
-//fun MapLsit(
-//    modifier: Modifier = Modifier,
-//    names: List<String> = List(1000) { "$it" }
-//) {
-//    LazyColumn(modifier = modifier.padding(vertical = 14.dp)) {
-//        items(items = names) { name ->
-//            MapItme(name = name)
-//        }
-//    }
-//}
-//
-//@Composable
-//private fun MapItme(name: String, modifier: Modifier = Modifier) {
-//    //rememberSaveable 를 이용해서 스크롤을 해도 해당 확장 값을 기억 한다.
-//    var expanded by rememberSaveable { mutableStateOf(false) }
-//
-//    val extraPadding by animateDpAsState(
-//        if (expanded) 48.dp else 0.dp,
-//        animationSpec = spring( //확장하거나 축소할때 애니메이션과 효과를 설정.
-//            dampingRatio = Spring.DampingRatioMediumBouncy,
-//            stiffness = Spring.StiffnessVeryLow
-//        )
-//    )
-//    Surface(
-//        color = MaterialTheme.colorScheme.primary,
-//        modifier = modifier.padding(vertical = 4.dp, horizontal = 8.dp)
-//    ) {
-//        Row(modifier = Modifier.padding(24.dp)) {   //가로행.
-//            Column( //세로
-//                modifier = Modifier
-//                    .weight(1f)
-//                    .padding(bottom = extraPadding.coerceAtLeast(0.dp))
-//            ) {
-//                Text(text = "Hello, ")
-//                Text(text = name)
-//            }
-//
-//            ElevatedButton(
-//                onClick = { expanded = !expanded }
-//            ) {
-//                Text(if (expanded) "Show less" else "Show more")
-//            }
-//        }
-//    }
-//}
-
 @Composable
 //fun CampDataListView(modifier: Modifier = Modifier, campDatas: List<CampData>) {
 fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel = viewModel()) {
     Log.d(TAG, "CampDataListView()")
     val context = LocalContext.current
-    val users = mainViewModel.users.observeAsState(initial = emptyList()).value
+//    val users = mainViewModel.users.observeAsState(initial = emptyList()).value
+    val my_camping_list = mainViewModel.my_camping_list.observeAsState(initial = emptyList()).value
 //    LaunchedEffect(Unit) {    //최초1회만 실행됨.
-    LaunchedEffect(users) { //users값이 변경될때 블럭이 실행됨.
-        mainViewModel.fetchUsers()
+    LaunchedEffect(my_camping_list) { //users값이 변경될때 블럭이 실행됨.
+//        mainViewModel.fetchUsers()
+        mainViewModel.getAllCampingSites { isComplete ->
+            Log.d(TAG, "getAllCampingSites() $isComplete")
+            if(!isComplete) {
+                //목록 가져오기 실패.
+                Toast.makeText(context, "목록 가져오기 실패", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     //메모리 관리가 들어간 LazyColumn
     LazyColumn(modifier = modifier.padding(vertical = 14.dp /*상하 패딩.*/)) {
-        items(users) {
-            CampDataViewCard(it, onCardClick = { user ->
-                Log.d(TAG, "onCardClick() $user")
-                // User 데이터 발행
-                BaseViewModel.LiveDataBus._selectUser.postValue(user)
-                val intent = Intent(context, MapActivity::class.java)
-                context.startActivity(intent)
-            })
+        items(my_camping_list) { my_camping_list ->
+            CampDataViewCard(my_camping_list,
+                //카드 클릭 이벤트
+                onCardClick = { campingSite ->
+                    Log.d(TAG, "onCardClick() $my_camping_list")
+                    //
+                    BaseViewModel.LiveDataBus._selectCampingSite.postValue(my_camping_list)
+                    val intent = Intent(context, MapActivity::class.java)
+                    context.startActivity(intent)
+                },
+                //
+                onCardDeleteClick = { id ->
+                    mainViewModel.deleteCampingSite(id) { isComplete ->
+                        if(isComplete) {
+                            //삭제 성공.
+                            Toast.makeText(context, "삭제 성공", Toast.LENGTH_SHORT).show()
+                        } else {
+                            //삭제 실패.
+                            Toast.makeText(context, "삭제 실패", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            )
         }
     }
 }
@@ -193,13 +168,14 @@ fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel
 @Composable
 fun CampDataViewCardPreview() {
     TestComposeUITheme {
-        val user = User(id = 0, name = "이름", username = "사용자 이름", email = "이메일", address = null, phone = null, website = null, company = null)
-        CampDataViewCard(user = user, onCardClick = {})
+        CampDataViewCard(capingSite = CampingSite(), onCardClick = {}, onCardDeleteClick = {})
     }
 }
 
 @Composable
-fun CampDataViewCard(user: User, onCardClick: (User) -> Unit) {
+fun CampDataViewCard(capingSite: CampingSite,
+                     onCardClick: (CampingSite) -> Unit,
+                     onCardDeleteClick: (String) -> Unit) {
     val typography = MaterialTheme.typography
     val elevation = CardDefaults.cardElevation(
         defaultElevation = 0.dp
@@ -207,7 +183,7 @@ fun CampDataViewCard(user: User, onCardClick: (User) -> Unit) {
 
     Card(
         modifier = Modifier
-            .clickable(onClick = { onCardClick(user) }) //카드 클릭 이벤트.
+            .clickable(onClick = { onCardClick(capingSite) }) //카드 클릭 이벤트.
             .fillMaxWidth()     //가로 전체 화면 다쓴다.
             .padding(10.dp),    //카드간 간격.
         shape = RoundedCornerShape(12.dp),
@@ -230,20 +206,23 @@ fun CampDataViewCard(user: User, onCardClick: (User) -> Unit) {
 //                    .clip(CircleShape)
 //                    .background(MyBlue)
 //            )
-            ProfileImg(user.imgUrl)
+            ProfileImg("https://randomuser.me/api/portraits/women/11.jpg")
 
             Column() {
-                user.name?.let {
-                    Text(
-                        text = it,
-                        style = typography.titleLarge
-                    )
-                }
-                user.email?.let {
-                    Text(
-                        text = it,
-                        style = typography.titleMedium
-                    )
+                Text(
+                    text = capingSite.name,
+                    style = typography.titleLarge
+                )
+                Text(
+                    text = capingSite.address,
+                    style = typography.titleMedium
+                )
+                Button(onClick = {
+                    // 삭제 버튼 클릭 시 처리
+                    Log.d(TAG, "CampDataViewCard() onClick() Delete ID = ${capingSite.id}")
+                    onCardDeleteClick(capingSite.id)
+                }) {
+                    Text(text = "삭제")
                 }
             }
         }

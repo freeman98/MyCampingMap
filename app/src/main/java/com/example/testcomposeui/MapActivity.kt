@@ -19,7 +19,7 @@ class MapActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        BaseViewModel.LiveDataBus.selectUser.observe(this, Observer { user ->
+        BaseViewModel.LiveDataBus.selectCampingSite.observe(this, Observer { user ->
             // User 데이터 사용
             user?.let {
                 Log.d(TAG, "onCreate: $it")

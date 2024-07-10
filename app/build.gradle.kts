@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-parcelize")
+    alias(libs.plugins.googleServices)
 }
 
 android {
@@ -57,15 +58,20 @@ dependencies {
     implementation (libs.places)
     implementation (libs.androidx.material)
     implementation (libs.github.glide)
-    implementation(libs.androidx.runtime.livedata)  //이미치 저리 관련.
+    implementation(libs.androidx.runtime.livedata)
+    implementation(libs.firebase.common.ktx)  //이미치 저리 관련.
     annotationProcessor (libs.compiler)
-    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation ("com.squareup.retrofit2:adapter-rxjava3:2.9.0")
-    implementation ("io.reactivex.rxjava3:rxjava:3.1.3")
-    implementation ("io.reactivex.rxjava3:rxandroid:3.0.0")
-    implementation ("com.google.android.gms:play-services-maps:19.0.0")
-    implementation("com.google.android.libraries.places:places:3.5.0")
+    implementation (libs.retrofit)
+    implementation (libs.converter.gson)
+    implementation (libs.adapter.rxjava3)
+//    implementation ("io.reactivex.rxjava3:rxjava:3.1.5")
+    implementation (libs.rxandroid)
+    implementation (libs.play.services.maps.v1900)
+    implementation (libs.places)
+    implementation (libs.firebase.firestore.ktx)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.play.services.auth)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">TestComposeUI</string>
     <string name="title_activity_map">MapActivity</string>
+
+    <string name="default_web_client_id">287683711696-258mj1anujlruli1p7qlv6384fe3h34b.apps.googleusercontent.com</string>
+
 </resources>
