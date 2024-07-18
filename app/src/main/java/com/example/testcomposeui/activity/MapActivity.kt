@@ -1,4 +1,4 @@
-package com.example.testcomposeui
+package com.example.testcomposeui.activity
 
 import android.content.ContentValues.TAG
 import android.content.Context
@@ -12,7 +12,11 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.testcomposeui.MyApplication
+import com.example.testcomposeui.compose.MapScreen
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
+import com.example.testcomposeui.viewmodels.BaseViewModel
+import com.example.testcomposeui.viewmodels.MapViewModel
 
 class MapActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

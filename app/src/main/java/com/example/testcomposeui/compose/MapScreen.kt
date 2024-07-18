@@ -1,4 +1,4 @@
-package com.example.testcomposeui
+package com.example.testcomposeui.compose
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -60,6 +60,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.testcomposeui.MyApplication
+import com.example.testcomposeui.R
+import com.example.testcomposeui.viewmodels.BaseViewModel
+import com.example.testcomposeui.viewmodels.MapViewModel
 import com.example.testcomposeui.data.CampingSite
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
 import com.google.android.gms.maps.MapView
@@ -67,11 +71,9 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.libraries.places.api.model.Place
 import com.google.firebase.firestore.FirebaseFirestore
 
-val TAG = "MapActivityCompose"
-
 @Composable
 fun MapScreen(viewModel: MapViewModel, onBackPressed: () -> Unit) {
-    Log.d(TAG, "MapScreen()")
+    Log.d(viewModel.TAG, "MapScreen()")
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -103,7 +105,7 @@ fun MapScreen(viewModel: MapViewModel, onBackPressed: () -> Unit) {
                     viewModel.searchPlace(searchText)
                 },
                 onBackPressed = {
-                    Log.d(TAG, "MapScreen() onBackPressed()")
+                    Log.d(viewModel.TAG, "MapScreen() onBackPressed()")
                     onBackPressed()
                 }
             )
@@ -137,12 +139,12 @@ fun MyLocationButtonPreview() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchBox(onSearch: (String) -> Unit, onBackPressed: () -> Unit, mapViewModel: MapViewModel = viewModel()) {
+fun SearchBox(onSearch: (String) -> Unit, onBackPressed: () -> Unit, viewModel: MapViewModel = viewModel()) {
     //상단 가로 정력 입력창 과 검색 버튼
-    Log.d(TAG, "SearchBox()")
+    Log.d(viewModel.TAG, "SearchBox()")
     var searchText by remember { mutableStateOf("") }
     //검색창이 보이지 않으면 false 보이면 true
-    val isSearchListVisible = mapViewModel.isSearchListVisible.observeAsState(false).value
+    val isSearchListVisible = viewModel.isSearchListVisible.observeAsState(false).value
 
     Row(
         modifier = Modifier
@@ -156,12 +158,12 @@ fun SearchBox(onSearch: (String) -> Unit, onBackPressed: () -> Unit, mapViewMode
                 .align(Alignment.CenterVertically),  //세로 정렬.
             onClick = {
                 //리스트 아이콘 클릭시.
-                Log.d(TAG, "SearchBox() onListButton()")
-                if(mapViewModel.getMarkerCount() != 0) {
-                    mapViewModel.setSearchListVisible(!isSearchListVisible)
+                Log.d(viewModel.TAG, "SearchBox() onListButton()")
+                if(viewModel.getMarkerCount() != 0) {
+                    viewModel.setSearchListVisible(!isSearchListVisible)
                 } else {
                     //마커가 없을경우.
-                    if(isSearchListVisible) mapViewModel.setSearchListVisible(false)
+                    if(isSearchListVisible) viewModel.setSearchListVisible(false)
                 }
             }
         ) {
@@ -214,19 +216,19 @@ fun SearchBox(onSearch: (String) -> Unit, onBackPressed: () -> Unit, mapViewMode
     //검색 리스트 컴포즈
     SearchListView(
         onBackPressed = {
-            Log.d(TAG, "SearchBox() onBackPressed()")
+            Log.d(viewModel.TAG, "SearchBox() onBackPressed()")
             onBackPressed()
         }
     )
 }
 
 @Composable
-fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = viewModel(), onBackPressed: () -> Unit) {
-    Log.d(TAG, "serchListView()")
+fun SearchListView(modifier: Modifier = Modifier, viewModel: MapViewModel = viewModel(), onBackPressed: () -> Unit) {
+    Log.d(viewModel.TAG, "serchListView()")
     //지도에 표시될 Place list.
-    val placesList = mapViewModel.placesList.observeAsState(initial = emptyList()).value
+    val placesList = viewModel.placesList.observeAsState(initial = emptyList()).value
     //검색창이 보이지 않으면 false 보이면 true
-    val isSearchListVisible = mapViewModel.isSearchListVisible.observeAsState(false).value
+    val isSearchListVisible = viewModel.isSearchListVisible.observeAsState(false).value
     //뒤로가기 버튼 눌렀는지 체크. 누르면 true
     val isBackPressed = remember { mutableStateOf(false) }
     // LazyListState를 기억합니다.
@@ -234,20 +236,20 @@ fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = v
 
     BackHandler {
         //백키를 눌렀을때
-        Log.d(TAG, "isSearchListVisible = $isSearchListVisible")
+        Log.d(viewModel.TAG, "isSearchListVisible = $isSearchListVisible")
         //검색창이 보이지 않으면 백키 처리.
         if(!isSearchListVisible) {
             isBackPressed.value = true
         } else {
             //검색창이 보이면 닫기 액션.
-            mapViewModel.setSearchListVisible(false)
+            viewModel.setSearchListVisible(false)
         }
-        Log.d(TAG, "BackHandler() $isBackPressed")
+        Log.d(viewModel.TAG, "BackHandler() $isBackPressed")
     }
 
     if ( isBackPressed.value && !isSearchListVisible) {
         //isBackPressed = true, isSearchListVisible = false 일때
-        Log.d(TAG, "SearchListView() onBackPressed()")
+        Log.d(viewModel.TAG, "SearchListView() onBackPressed()")
         onBackPressed()
     }
 
@@ -255,8 +257,8 @@ fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = v
         //placesList 값이 변경이 있을 경우에만.
         if(placesList.isNotEmpty()) {
             //검색 결과가 있을경우.
-            Log.d(TAG, "placesList.size ${placesList.size}")
-            mapViewModel.setSearchListVisible(true) //검색창 보이게.
+//            Log.d(TAG, "placesList.size ${placesList.size}")
+            viewModel.setSearchListVisible(true) //검색창 보이게.
             listState.scrollToItem(0)   //리스트 상단으로 이동.
         } else {
             //검색 결과가 없을경우.
@@ -270,7 +272,7 @@ fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = v
     } else {
         //검색창이 보이지만 리스트가 없다면 검색창 닫기.
         if(placesList.isEmpty()) {
-            mapViewModel.setSearchListVisible(false)
+            viewModel.setSearchListVisible(false)
         }
     }
 
@@ -289,9 +291,9 @@ fun SearchListView(modifier: Modifier = Modifier, mapViewModel: MapViewModel = v
                 SerchListViewCard(
                     place,
                     onCardClick = { selectPlace ->
-                        Log.d(TAG, "onCardClick() $selectPlace")
-                        mapViewModel.gotoPlace(selectPlace)
-                        mapViewModel.setSearchListVisible(false)
+                        Log.d(viewModel.TAG, "onCardClick() $selectPlace")
+                        viewModel.gotoPlace(selectPlace)
+                        viewModel.setSearchListVisible(false)
                     }
                 )
             }
@@ -333,7 +335,7 @@ fun SerchListViewCard (place: Place, onCardClick: (Place) -> Unit) {
                 ClickableText(text = AnnotatedString("- 전화 : $phoneNumber"),
                     style = typography.bodyMedium,
                     onClick = {
-                        Log.d(TAG, "SerchListViewCard() onClick: $phoneNumber")
+                        Log.d("", "SerchListViewCard() onClick: $phoneNumber")
                         callPhone(phoneNumber)
                 })
             }
@@ -342,7 +344,7 @@ fun SerchListViewCard (place: Place, onCardClick: (Place) -> Unit) {
                 ClickableText(text = AnnotatedString("- 사이트 : $uri"),
                     style = typography.bodyMedium,
                     onClick = {
-                        Log.d(TAG, "SerchListViewCard() onClick: $uri")
+                        Log.d("", "SerchListViewCard() onClick: $uri")
                         openWebPage(uri)
                     })
             }
@@ -380,27 +382,26 @@ fun saveCampingSite(place: Place) {
         reviews = place.reviews?.toString() ?: "",
         websiteUri = place.websiteUri?.toString() ?: ""
     )
-    Log.d(TAG, "$campingSite")
+    Log.d("", "$campingSite")
 
     val db = FirebaseFirestore.getInstance()
-    db.collection("my_camping_list")
-        .document(campingSite.id)
+    db.collection("my_camping_list").document(campingSite.id)
         .set(campingSite)
         .addOnSuccessListener {
             // 데이터 저장 성공
-            Log.d(TAG, "addOnSuccessListener()")
+            Log.d("", "addOnSuccessListener()")
             Toast.makeText(MyApplication.context, "저장 성공", Toast.LENGTH_SHORT).show()
         }
         .addOnFailureListener { e ->
             // 데이터 저장 실패
-            Log.w(TAG, "addOnFailureListener() = ", e)
+            Log.w("", "addOnFailureListener() = ", e)
             Toast.makeText(MyApplication.context, "저장 실패", Toast.LENGTH_SHORT).show()
         }
 }
 
 fun openWebPage(uri: Uri) {
     // 웹 페이지를 열기 위한 Intent 생성
-    Log.d(TAG, "openWebPage() $uri")
+    Log.d("", "openWebPage() $uri")
     val intent = Intent(Intent.ACTION_VIEW).apply {
         data = uri
         flags = Intent.FLAG_ACTIVITY_NEW_TASK // 플래그 추가
@@ -414,7 +415,7 @@ fun openWebPage(uri: Uri) {
 
 fun callPhone(phoneNumber: String) {
     // 전화를 걸기 위한 Intent 생성
-    Log.d(TAG, "callPhone() $phoneNumber")
+    Log.d("", "callPhone() $phoneNumber")
     val intent = Intent(Intent.ACTION_DIAL).apply {
         data = Uri.parse("tel:$phoneNumber")
         flags = Intent.FLAG_ACTIVITY_NEW_TASK // 플래그 추가
@@ -437,23 +438,23 @@ fun SearchListViewPreview() {
 
 @SuppressLint("MutableCollectionMutableState")
 @Composable
-fun MapView(mapViewModel: MapViewModel = viewModel()) {
-    Log.d(TAG, "MapView()")
-    val googleMap by mapViewModel.googleMap.observeAsState()
+fun MapView(viewModel: MapViewModel = viewModel()) {
+    Log.d(viewModel.TAG, "MapView()")
+    val googleMap by viewModel.googleMap.observeAsState()
     //내 현재 위치 - 현재 위치를 기억 하기 위해 LiveDataBus 사용.
     val currentLocation by BaseViewModel.LiveDataBus.currentMyLocation.observeAsState()
     //지도에 표시될 Place map.
-    val markerPlaceMap by mapViewModel.markerPlaceMap.observeAsState()
+    val markerPlaceMap by viewModel.markerPlaceMap.observeAsState()
 
     AndroidView(
         factory = { context ->
             MapView(context).apply {
-                Log.d(TAG, "AndroidView onCreate()")
+                Log.d(viewModel.TAG, "AndroidView onCreate()")
                 onCreate(null)
                 onResume()
                 getMapAsync(OnMapReadyCallback { googleMap ->
                     //구글맵 준비되면 호출.
-                    mapViewModel.setGoogleMap(googleMap)
+                    viewModel.setGoogleMap(googleMap)
                 })
             }
         },
@@ -465,13 +466,13 @@ fun MapView(mapViewModel: MapViewModel = viewModel()) {
         LaunchedEffect(currentLocation) {
             currentLocation?.let { myLocation ->
                 //현재 위치로 카메라 이동.
-                mapViewModel.setMyLocationMarker(myLocation)
+                viewModel.setMyLocationMarker(myLocation)
             }
         }
 
         //지도에 표시될 Places 리스트가 있을경우 만 실행.
         LaunchedEffect(markerPlaceMap) {
-            markerPlaceMap?.let {mapViewModel.gotoFirstPlace(it)}
+            markerPlaceMap?.let {viewModel.gotoFirstPlace(it)}
         }
     }
 }

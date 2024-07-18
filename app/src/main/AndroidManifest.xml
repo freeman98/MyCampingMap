@@ -6,9 +6,9 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:name=".MyApplication"
@@ -21,28 +21,30 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TestComposeUI"
         tools:targetApi="31">
-
-        <!-- API 키 추가 -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBWBSrgjli6i8M6XIyCcVuwxXcrLn8LIrQ"/>
-
         <activity
-            android:name=".MapActivity"
-            android:exported="false"
-            android:label="@string/title_activity_map"
-            android:theme="@style/Theme.TestComposeUI" />
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.TestComposeUI">
+            android:name=".activity.SplashActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity> <!-- API 키 추가 -->
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBWBSrgjli6i8M6XIyCcVuwxXcrLn8LIrQ" />
+
+        <activity
+            android:name=".activity.MapActivity"
+            android:exported="false"
+            android:label="@string/title_activity_map"
+            android:theme="@style/Theme.TestComposeUI" />
+        <activity
+            android:name=".activity.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.TestComposeUI" />
     </application>
 
 </manifest>

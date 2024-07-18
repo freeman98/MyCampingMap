@@ -1,23 +1,30 @@
-package com.example.testcomposeui
+package com.example.testcomposeui.viewmodels
 
+import android.Manifest
 import android.content.ContentValues.TAG
+import android.content.Context
+import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.util.Log
-import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import com.example.testcomposeui.api.RetrofitInstance
 import com.example.testcomposeui.data.CampingSite
 import com.example.testcomposeui.data.User
 import com.google.firebase.firestore.FirebaseFirestore
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
-import io.reactivex.rxjava3.internal.util.HalfSerializer.onComplete
 import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 //MVVM 모델 과 컴포스를 적용
 class MainViewModel: BaseViewModel(){
+
+    val TAG = MainViewModel::class.java.simpleName
 
     val compositeDisposable = CompositeDisposable()
     private val _users = MutableLiveData<List<User>>()
@@ -26,9 +33,23 @@ class MainViewModel: BaseViewModel(){
     private val _my_camping_list = MutableLiveData<List<CampingSite>>()
     val my_camping_list: LiveData<List<CampingSite>> = _my_camping_list
 
-//    init {
-//        fetchUsers()
-//    }
+    fun checkUserExists(userId: String, onResult: (Boolean) -> Unit) {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("users").document(userId)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    onResult(true) // 기존 회원
+                } else {
+                    onResult(false) // 최초 가입
+                }
+            }
+            .addOnFailureListener { exception ->
+                Log.w(TAG, "Error getting document: ", exception)
+                onResult(false) // 오류 발생 시 최초 가입으로 간주
+            }
+    }
+
 
     fun getAllCampingSites(onComplete: (Boolean) -> Unit) {
         //파이어스토어 데이터베이스에 저장된 캠핑장 정보 가져오기.
@@ -55,8 +76,7 @@ class MainViewModel: BaseViewModel(){
     fun deleteCampingSite(id: String, onComplete: (Boolean) -> Unit) {
         //파이어스토어 데이터베이스에 저장된 캠핑장 정보 삭제.
         val db = FirebaseFirestore.getInstance()
-        db.collection("my_camping_list")
-            .document(id)
+        db.collection("my_camping_list").document(id)
             .delete()
             .addOnSuccessListener {
                 Log.d(TAG, "DocumentSnapshot successfully deleted!")

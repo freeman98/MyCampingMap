@@ -1,7 +1,6 @@
-package com.example.testcomposeui
+package com.example.testcomposeui.viewmodels
 
 import android.Manifest
-import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -15,7 +14,9 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.example.testcomposeui.MyApplication
 import com.example.testcomposeui.MyApplication.Companion.context
+import com.example.testcomposeui.R
 import com.example.testcomposeui.utils.MyLocation
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -33,7 +34,10 @@ import kotlin.math.pow
 
 class MapViewModel(_context: Context) : BaseViewModel() {
 
+    open val TAG: String = MapViewModel::class.java.simpleName
+
     companion object {
+
         const val DEFAULT_ZOOM_LEVEL: Float = 13F
         val SEOUL_LATLNG = LatLng(37.5665, 126.9780) // 서울의 좌표
         private val placesClient: PlacesClient = Places.createClient(MyApplication.context)
@@ -184,7 +188,7 @@ class MapViewModel(_context: Context) : BaseViewModel() {
             val title = marker.title
             val snippet = marker.snippet
             val place = marker.tag as? Place
-            Log.d(TAG, "render() place.rating = ${place?.rating}")
+            Log.d("", "render() place.rating = ${place?.rating}")
 
             val titleUi = view.findViewById<TextView>(R.id.title)
             titleUi.text = place?.rating?.let {"$title  ${it}/5.0" } ?: title
@@ -198,7 +202,9 @@ class MapViewModel(_context: Context) : BaseViewModel() {
     private fun addMapMarkers(places: List<Place>?) {
         val map = mutableMapOf<Marker, Place>()
         places?.forEach { place ->
-            val markerOption = createMarkerOptions(place.latLng, place.name, place.address, R.drawable.ic_location_transparent)
+            val markerOption = createMarkerOptions(place.latLng, place.name, place.address,
+                R.drawable.ic_location_transparent
+            )
             _googleMap.value?.addMarker(markerOption)?.let { marker ->
                 marker.tag = place
                 map[marker] = place

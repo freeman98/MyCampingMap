@@ -1,6 +1,5 @@
-package com.example.testcomposeui
+package com.example.testcomposeui.compose
 
-import android.content.ContentValues.TAG
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
@@ -53,17 +52,23 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.example.testcomposeui.R
+import com.example.testcomposeui.activity.MapActivity
 import com.example.testcomposeui.data.CampingSite
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
+import com.example.testcomposeui.viewmodels.BaseViewModel
+import com.example.testcomposeui.viewmodels.MainViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun MainTopAppBar() {
+fun MainTopAppBar(viewModel: MainViewModel = viewModel()) {
+
     Scaffold(
         topBar = {
             CustomSmallTopAppBar(
                 title = "My Camping List",
                 onNavigationIconClick = {
-                    Log.d(TAG, "onNavigationIconClick()")
+                    Log.d(viewModel.TAG, "onNavigationIconClick()")
                 }
             )
         }
@@ -105,7 +110,7 @@ fun CustomSmallTopAppBar(
         actions = {
             // 여기에 추가 액션 아이콘을 배치할 수 있습니다.
             IconButton(onClick = {
-                Log.d(TAG, "actions IconButton()")
+//                Log.d(TAG, "actions IconButton()")
             }) {
                 Icon(
                     imageVector = Icons.Filled.Favorite,
@@ -118,16 +123,25 @@ fun CustomSmallTopAppBar(
 
 @Composable
 //fun CampDataListView(modifier: Modifier = Modifier, campDatas: List<CampData>) {
-fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel = viewModel()) {
-    Log.d(TAG, "CampDataListView()")
+fun CampDataListView(modifier: Modifier = Modifier, viewModel: MainViewModel = viewModel()) {
+    Log.d(viewModel.TAG, "CampDataListView()")
     val context = LocalContext.current
 //    val users = mainViewModel.users.observeAsState(initial = emptyList()).value
-    val my_camping_list = mainViewModel.my_camping_list.observeAsState(initial = emptyList()).value
-//    LaunchedEffect(Unit) {    //최초1회만 실행됨.
+    val my_camping_list = viewModel.my_camping_list.observeAsState(initial = emptyList()).value
+
+    FirebaseAuth.getInstance().currentUser?.let { user ->
+        val userId = user.uid
+        // 이곳에서 Firestore에서 사용자 정보를 가져오는 함수를 호출합니다.
+        Log.d(viewModel.TAG, "CampDataListView() userId = $userId")
+    } ?: run {
+        Log.d(viewModel.TAG, "CampDataListView() userId is null")
+        Toast.makeText(context, "로그인이 필요합니다.", Toast.LENGTH_SHORT).show()
+    }
+
     LaunchedEffect(my_camping_list) { //users값이 변경될때 블럭이 실행됨.
 //        mainViewModel.fetchUsers()
-        mainViewModel.getAllCampingSites { isComplete ->
-            Log.d(TAG, "getAllCampingSites() $isComplete")
+        viewModel.getAllCampingSites { isComplete ->
+            Log.d(viewModel.TAG, "getAllCampingSites() $isComplete")
             if(!isComplete) {
                 //목록 가져오기 실패.
                 Toast.makeText(context, "목록 가져오기 실패", Toast.LENGTH_SHORT).show()
@@ -141,7 +155,7 @@ fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel
             CampDataViewCard(my_camping_list,
                 //카드 클릭 이벤트
                 onCardClick = { campingSite ->
-                    Log.d(TAG, "onCardClick() $my_camping_list")
+                    Log.d(viewModel.TAG, "onCardClick() $my_camping_list")
                     //
                     BaseViewModel.LiveDataBus._selectCampingSite.postValue(my_camping_list)
                     val intent = Intent(context, MapActivity::class.java)
@@ -149,7 +163,7 @@ fun CampDataListView(modifier: Modifier = Modifier, mainViewModel: MainViewModel
                 },
                 //
                 onCardDeleteClick = { id ->
-                    mainViewModel.deleteCampingSite(id) { isComplete ->
+                    viewModel.deleteCampingSite(id) { isComplete ->
                         if(isComplete) {
                             //삭제 성공.
                             Toast.makeText(context, "삭제 성공", Toast.LENGTH_SHORT).show()
@@ -208,7 +222,7 @@ fun CampDataViewCard(capingSite: CampingSite,
 //            )
             ProfileImg("https://randomuser.me/api/portraits/women/11.jpg")
 
-            Column() {
+            Column {
                 Text(
                     text = capingSite.name,
                     style = typography.titleLarge
@@ -219,7 +233,7 @@ fun CampDataViewCard(capingSite: CampingSite,
                 )
                 Button(onClick = {
                     // 삭제 버튼 클릭 시 처리
-                    Log.d(TAG, "CampDataViewCard() onClick() Delete ID = ${capingSite.id}")
+//                    Log.d(viewModel.TAG, "CampDataViewCard() onClick() Delete ID = ${capingSite.id}")
                     onCardDeleteClick(capingSite.id)
                 }) {
                     Text(text = "삭제")
@@ -276,6 +290,6 @@ fun ProfileImg(imgUrl: String?, modifier: Modifier = Modifier) {
 @Composable
 fun MyTopBarComposePreview() {
     TestComposeUITheme {
-        MainTopAppBar()
+//        MainTopAppBar(mainViewModel = MainViewModel(), requestPermissionLauncher = ActivityResultLauncher<Array<String>>)
     }
 }
