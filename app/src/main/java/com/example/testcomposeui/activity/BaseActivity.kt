@@ -7,8 +7,6 @@ import com.google.firebase.auth.FirebaseAuth
 
 abstract class BaseActivity: ComponentActivity() {
     companion object {
-        lateinit var auth: FirebaseAuth
-        lateinit var googleSignInClient: GoogleSignInClient
     }
 
 }

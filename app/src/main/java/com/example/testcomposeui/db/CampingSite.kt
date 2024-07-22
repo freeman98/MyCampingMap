@@ -1,7 +1,11 @@
-package com.example.testcomposeui.data
+package com.example.testcomposeui.db
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "camping_site_table")
 data class CampingSite(
-    val id: String = "",
+    @PrimaryKey val id: String = "",
     val name: String = "",
     val address: String = "",
     val phoneNumber: String = "",

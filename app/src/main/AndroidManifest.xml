@@ -22,8 +22,9 @@
         android:theme="@style/Theme.TestComposeUI"
         tools:targetApi="31">
         <activity
-            android:name=".activity.SplashActivity"
-            android:exported="true">
+            android:name=".activity.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TestComposeUI" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -39,11 +40,6 @@
             android:name=".activity.MapActivity"
             android:exported="false"
             android:label="@string/title_activity_map"
-            android:theme="@style/Theme.TestComposeUI" />
-        <activity
-            android:name=".activity.MainActivity"
-            android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.TestComposeUI" />
     </application>
 

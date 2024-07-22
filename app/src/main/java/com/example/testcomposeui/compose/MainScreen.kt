@@ -1,5 +1,6 @@
 package com.example.testcomposeui.compose
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
@@ -20,8 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,14 +55,14 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.example.testcomposeui.R
 import com.example.testcomposeui.activity.MapActivity
-import com.example.testcomposeui.data.CampingSite
+import com.example.testcomposeui.db.CampingSite
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
 import com.example.testcomposeui.viewmodels.BaseViewModel
 import com.example.testcomposeui.viewmodels.MainViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun MainTopAppBar(viewModel: MainViewModel = viewModel()) {
+fun MainScreen(viewModel: MainViewModel = viewModel()) {
 
     Scaffold(
         topBar = {
@@ -91,6 +92,7 @@ fun CustomSmallTopAppBar(
     title: String,
     onNavigationIconClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     SmallTopAppBar(
         title = { Text(text = title) },
         colors = TopAppBarDefaults.smallTopAppBarColors(
@@ -111,22 +113,29 @@ fun CustomSmallTopAppBar(
             // 여기에 추가 액션 아이콘을 배치할 수 있습니다.
             IconButton(onClick = {
 //                Log.d(TAG, "actions IconButton()")
+
+                gotoMapActivity(context)
             }) {
                 Icon(
-                    imageVector = Icons.Filled.Favorite,
-                    contentDescription = "Favorite"
+                    imageVector = Icons.Filled.Place,
+                    contentDescription = "Map"
                 )
             }
         }
     )
 }
 
+fun gotoMapActivity(context: Context) {
+    val intent = Intent(context, MapActivity::class.java)
+    context.startActivity(intent)
+}
+
 @Composable
 //fun CampDataListView(modifier: Modifier = Modifier, campDatas: List<CampData>) {
-fun CampDataListView(modifier: Modifier = Modifier, viewModel: MainViewModel = viewModel()) {
+fun CampDataListView(modifier: Modifier = Modifier, viewModel: MainViewModel = viewModel()
+                     ) {
     Log.d(viewModel.TAG, "CampDataListView()")
     val context = LocalContext.current
-//    val users = mainViewModel.users.observeAsState(initial = emptyList()).value
     val my_camping_list = viewModel.my_camping_list.observeAsState(initial = emptyList()).value
 
     FirebaseAuth.getInstance().currentUser?.let { user ->
@@ -141,7 +150,7 @@ fun CampDataListView(modifier: Modifier = Modifier, viewModel: MainViewModel = v
     LaunchedEffect(my_camping_list) { //users값이 변경될때 블럭이 실행됨.
 //        mainViewModel.fetchUsers()
         viewModel.getAllCampingSites { isComplete ->
-            Log.d(viewModel.TAG, "getAllCampingSites() $isComplete")
+            Log.d(viewModel.TAG, "getAllCampingSites() isComplete = $isComplete")
             if(!isComplete) {
                 //목록 가져오기 실패.
                 Toast.makeText(context, "목록 가져오기 실패", Toast.LENGTH_SHORT).show()
@@ -149,17 +158,16 @@ fun CampDataListView(modifier: Modifier = Modifier, viewModel: MainViewModel = v
         }
     }
 
+    Log.d(viewModel.TAG, "CampDataListView() my_camping_list.size = ${my_camping_list.size}")
     //메모리 관리가 들어간 LazyColumn
     LazyColumn(modifier = modifier.padding(vertical = 14.dp /*상하 패딩.*/)) {
         items(my_camping_list) { my_camping_list ->
             CampDataViewCard(my_camping_list,
                 //카드 클릭 이벤트
                 onCardClick = { campingSite ->
-                    Log.d(viewModel.TAG, "onCardClick() $my_camping_list")
-                    //
-                    BaseViewModel.LiveDataBus._selectCampingSite.postValue(my_camping_list)
-                    val intent = Intent(context, MapActivity::class.java)
-                    context.startActivity(intent)
+                    Log.d(viewModel.TAG, "onCardClick() $campingSite")
+                    viewModel.selectCampingSite(campingSite)
+                    gotoMapActivity(context)
                 },
                 //
                 onCardDeleteClick = { id ->
@@ -288,8 +296,8 @@ fun ProfileImg(imgUrl: String?, modifier: Modifier = Modifier) {
 
 @Preview(showBackground = true)
 @Composable
-fun MyTopBarComposePreview() {
+fun MainScreenPreview() {
     TestComposeUITheme {
-//        MainTopAppBar(mainViewModel = MainViewModel(), requestPermissionLauncher = ActivityResultLauncher<Array<String>>)
+        MainScreen()
     }
 }

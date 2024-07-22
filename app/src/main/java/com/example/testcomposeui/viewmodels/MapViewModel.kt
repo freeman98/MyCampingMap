@@ -3,8 +3,6 @@ package com.example.testcomposeui.viewmodels
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.location.Location
 import android.util.Log
 import android.view.LayoutInflater
@@ -17,7 +15,11 @@ import androidx.lifecycle.MutableLiveData
 import com.example.testcomposeui.MyApplication
 import com.example.testcomposeui.MyApplication.Companion.context
 import com.example.testcomposeui.R
+import com.example.testcomposeui.data.CampingDataUtil.createCampingSiteData
+import com.example.testcomposeui.db.CampingSite
 import com.example.testcomposeui.utils.MyLocation
+import com.example.testcomposeui.utils.MyLocation.parseLatLng
+import com.example.testcomposeui.viewmodels.BaseViewModel.LiveDataBus._selectCampingSite
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -32,15 +34,15 @@ import com.google.android.libraries.places.api.net.SearchByTextRequest
 import com.google.android.libraries.places.api.net.SearchNearbyRequest
 import kotlin.math.pow
 
-class MapViewModel(_context: Context) : BaseViewModel() {
+class MapViewModel : BaseViewModel() {
 
-    open val TAG: String = MapViewModel::class.java.simpleName
+    val TAG: String = MapViewModel::class.java.simpleName
 
     companion object {
 
         const val DEFAULT_ZOOM_LEVEL: Float = 13F
         val SEOUL_LATLNG = LatLng(37.5665, 126.9780) // 서울의 좌표
-        private val placesClient: PlacesClient = Places.createClient(MyApplication.context)
+        private val placesClient: PlacesClient = Places.createClient(context)
 
         //지도 검색 타입 캠핑장.
         val typeList = listOf("campground")
@@ -72,6 +74,9 @@ class MapViewModel(_context: Context) : BaseViewModel() {
         )
 
     }
+
+    private val _campingSite = MutableLiveData<CampingSite>()
+    val campingSite: LiveData<CampingSite> get() = _campingSite
 
     private val _isSearchListVisible = MutableLiveData<Boolean>()
     val isSearchListVisible get() = _isSearchListVisible
@@ -145,10 +150,15 @@ class MapViewModel(_context: Context) : BaseViewModel() {
         } ?: run {
             Log.d(TAG, "currentMyLocation = null")
             //저장된 내위치가 없을경우 - 내 위치 찾기.
-            myCurrentLocation { isSuccess, latitude, longitude ->
+            myCurrentLocation { isSuccess, _, _ ->
                 if (!isSuccess) {
                     //지도 초기화 떄 실패하면 서울을 기본 좌표로 정한다.
-                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(SEOUL_LATLNG, DEFAULT_ZOOM_LEVEL))
+                    map.moveCamera(
+                        CameraUpdateFactory.newLatLngZoom(
+                            SEOUL_LATLNG,
+                            DEFAULT_ZOOM_LEVEL
+                        )
+                    )
                 }
             }
         }
@@ -164,7 +174,7 @@ class MapViewModel(_context: Context) : BaseViewModel() {
             }
         }
 
-        map.setOnInfoWindowClickListener {marker ->
+        map.setOnInfoWindowClickListener { marker ->
             val place = _markerPlaceMap.value?.get(marker)
             Log.d(TAG, "OnInfoWindowClickListener() $place")
         }
@@ -173,9 +183,10 @@ class MapViewModel(_context: Context) : BaseViewModel() {
 
     class CustomInfoWindowAdapter(context: Context) : GoogleMap.InfoWindowAdapter {
         // 마커 클릭 시 나오는 말풍선 커스텀
-        private val window: View = LayoutInflater.from(context).inflate(R.layout.custom_info_window, null)
+        private val window: View =
+            LayoutInflater.from(context).inflate(R.layout.custom_info_window, null)
 
-        override fun getInfoWindow(marker: Marker): View? {
+        override fun getInfoWindow(marker: Marker): View {
             render(marker, window)
             return window
         }
@@ -191,7 +202,7 @@ class MapViewModel(_context: Context) : BaseViewModel() {
             Log.d("", "render() place.rating = ${place?.rating}")
 
             val titleUi = view.findViewById<TextView>(R.id.title)
-            titleUi.text = place?.rating?.let {"$title  ${it}/5.0" } ?: title
+            titleUi.text = place?.rating?.let { "$title  ${it}/5.0" } ?: title
 
             val snippetUi = view.findViewById<TextView>(R.id.snippet)
             snippetUi.text = snippet
@@ -202,21 +213,26 @@ class MapViewModel(_context: Context) : BaseViewModel() {
     private fun addMapMarkers(places: List<Place>?) {
         val map = mutableMapOf<Marker, Place>()
         places?.forEach { place ->
-            val markerOption = createMarkerOptions(place.latLng, place.name, place.address,
-                R.drawable.ic_location_transparent
+            val markerOption = createMarkerOptions(
+                place.latLng, place.name, place.address,
+                BitmapDescriptorFactory.HUE_RED
             )
             _googleMap.value?.addMarker(markerOption)?.let { marker ->
                 marker.tag = place
                 map[marker] = place
             }
         }
-        if(map.isEmpty()) Toast.makeText(MyApplication.context, "검색 결과가 없습니다.", Toast.LENGTH_SHORT).show()
+        if (map.isEmpty()) Toast.makeText(MyApplication.context, "검색 결과가 없습니다.", Toast.LENGTH_SHORT)
+            .show()
         _markerPlaceMap.value = map
     }
 
     private fun myCurrentLocation(onResult: (Boolean, String, String) -> Unit) {
         MyLocation.requestLocation { isSuccess, latitude, longitude ->
-            Log.d(TAG, "myCurrentLocation() isSuccess = $isSuccess, latitude=$latitude, longitude=$longitude")
+            Log.d(
+                TAG,
+                "myCurrentLocation() isSuccess = $isSuccess, latitude=$latitude, longitude=$longitude"
+            )
             if (isSuccess) {
                 //내 위치 찾기 성공.
                 val mylocation = Location("").apply {
@@ -227,16 +243,12 @@ class MapViewModel(_context: Context) : BaseViewModel() {
                 val latlng = LatLng(mylocation.latitude, mylocation.longitude)
                 latlng.let {
 
-//                    myCurrentMarker?.let { marker ->
-//                        //null 아니면 내 위치 마커를 초기화 한다
-//                        marker.remove()
-//                        myCurrentMarker = null
-//                    }
-//                    val map = _googleMap.value
-                    //내위치 마커 옵션.
-//                    val myMarkerOptions = createMarkerOptions(it, "You are here", null, android.R.drawable.ic_menu_mylocation)
-//                    myCurrentMarker = map?.addMarker() //내위치 마커 추가.
-                    _googleMap.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(it, DEFAULT_ZOOM_LEVEL))
+                    _googleMap.value?.animateCamera(
+                        CameraUpdateFactory.newLatLngZoom(
+                            it,
+                            DEFAULT_ZOOM_LEVEL
+                        )
+                    )
                 }
 
             } else {
@@ -252,14 +264,17 @@ class MapViewModel(_context: Context) : BaseViewModel() {
         position: LatLng,
         title: String,
         snippet: String?,
-        marker_id: Int
+        marker_hue: Float
     ): MarkerOptions {
-        val bitmap: Bitmap = BitmapFactory.decodeResource(MyApplication.context.resources, marker_id)
+//        val bitmap: Bitmap =
+//            BitmapFactory.decodeResource(context.resources, marker_id)
+        val bitmapDescriptor = BitmapDescriptorFactory.defaultMarker(marker_hue)
         return MarkerOptions()
             .position(position)
             .title(title)
             .snippet(snippet)
-            .icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+//            .icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+            .icon(bitmapDescriptor)
     }
 
     fun setMyLocationMarker(myLocation: Location) {
@@ -275,7 +290,8 @@ class MapViewModel(_context: Context) : BaseViewModel() {
     private fun searchText(text: String, onResult: (List<Place>?) -> Unit) {
         //캠핑장 이름 검색.
         val latLng = _googleMap.value?.cameraPosition?.target
-        val bounds = latLng?.let { CircularBounds.newInstance(it, calculateRadiusInMeters()) }
+        val bounds =
+            latLng?.let { CircularBounds.newInstance(it, calculateRadiusInMeters(_googleMap)) }
         val request = SearchByTextRequest.builder(text, placeFields)
             .setLocationBias(bounds)
             .setIncludedType("campground")
@@ -292,7 +308,7 @@ class MapViewModel(_context: Context) : BaseViewModel() {
 
     //특정 좌표를 중심으로 화면에 보이는 대략정인 범위 내에 있는 캠핑장 검색하는 함수
     private fun searchNearbyPlaces(latLng: LatLng, onResult: (List<Place>?) -> Unit) {
-        val bounds = CircularBounds.newInstance(latLng, calculateRadiusInMeters())
+        val bounds = CircularBounds.newInstance(latLng, calculateRadiusInMeters(_googleMap))
         val request = SearchNearbyRequest.builder(bounds, placeFields)
             .setIncludedPrimaryTypes(typeList)
             .build()
@@ -307,28 +323,8 @@ class MapViewModel(_context: Context) : BaseViewModel() {
             }
     }
 
-    // 지도의 넓이를 계산하는 함수
-    private fun calculateRadiusInMeters(): Double {
-        _googleMap.value?.let { map ->
-            val zoomLevel = map.cameraPosition.zoom
-            val mapWidthInPixels = MyApplication.context.resources.displayMetrics.widthPixels
-//            Log.d(TAG, "zoomLevel = $zoomLevel")
-
-            val worldSize = 40075016.686 // Earth's circumference in meters
-            val scale = 2.0.pow(zoomLevel.toDouble()) // 2^zoomLevel
-            val mapWidthMeters = worldSize / scale // The width of the map in meters at the given zoom level
-            //반지름
-            val radius = ((mapWidthMeters * mapWidthInPixels) / (2 * 256)) / 2 // 256 is the tile size in pixels
-            //최대 반지름은 50000m
-            Log.d(TAG, "radius = $radius")
-            return if (radius < 50000.0) radius else 50000.0
-
-        }
-        return 0.0
-    }
-
     // 모든 마커를 삭제하는 함수
-    fun removeAllMarkers() {
+    private fun removeAllMarkers() {
         Log.d(TAG, "removeAllMarkers()")
         _markerPlaceMap.value?.let { map ->
             if (map.isEmpty()) return
@@ -373,10 +369,10 @@ class MapViewModel(_context: Context) : BaseViewModel() {
 
     fun gotoMyLocation() {
         //내 위치로 이동.
-        myCurrentLocation { isSuccess, latitude, longitude ->
+        myCurrentLocation { isSuccess, _, _ ->
             if (!isSuccess) {
                 //지도 초기화 떄 실패하면 서울을 기본 좌표로 정한다.
-                Toast.makeText(MyApplication.context, "내 위치를 찾을 수 없습니다.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "내 위치를 찾을 수 없습니다.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -388,4 +384,73 @@ class MapViewModel(_context: Context) : BaseViewModel() {
             _googleMap.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 16f))
         }
     }
+
+    // 지도의 넓이를 계산하는 함수
+    private fun calculateRadiusInMeters(mpaLiveData: MutableLiveData<GoogleMap?>): Double {
+        mpaLiveData.value?.let { map ->
+            val zoomLevel = map.cameraPosition.zoom
+            val mapWidthInPixels = MyApplication.context.resources.displayMetrics.widthPixels
+//            Log.d(TAG, "zoomLevel = $zoomLevel")
+
+            val worldSize = 40075016.686 // Earth's circumference in meters
+            val scale = 2.0.pow(zoomLevel.toDouble()) // 2^zoomLevel
+            val mapWidthMeters =
+                worldSize / scale // The width of the map in meters at the given zoom level
+            //반지름
+            val radius =
+                ((mapWidthMeters * mapWidthInPixels) / (2 * 256)) / 2 // 256 is the tile size in pixels
+            //최대 반지름은 50000m
+            Log.d(TAG, "radius = $radius")
+            return if (radius < 50000.0) radius else 50000.0
+        }
+        return 0.0
+    }
+
+    fun insertCampingSite(
+        place: Place,
+        onSuccess: (Boolean) -> Unit,
+    ) {
+        // db에 캠핑장 추가.
+        Log.d(TAG, "insertCampingSite()")
+        dbCampingSiteInsert(createCampingSiteData(place), onSuccess = onSuccess)
+    }
+
+    fun clearSelectedCampingSite() {
+        _selectCampingSite.value = null
+    }
+
+    fun selectCampingSiteMarker(campingSite: CampingSite) {
+        // 메인리스트에서 선택한 캠팡장을 지도에 위치한다.
+        Log.d(TAG, "selectCampingSiteMarker() = $campingSite")
+        val latLng = parseLatLng(campingSite.location)
+        latLng?.let {
+            val markerOption = createMarkerOptions(
+                it, campingSite.name, campingSite.address,
+                BitmapDescriptorFactory.HUE_RED
+            )
+
+            _googleMap.value?.addMarker(markerOption)?.let { marker ->
+//                marker.tag = place
+//                map[marker] = place
+                marker.showInfoWindow() //마커 클릭 시 나오는 말풍선
+                gotoLatLng(marker)
+            }
+        }
+    }
+
+    private fun gotoLatLng(marker: Marker) {
+        Log.d(TAG, "gotoLatLng() marker = $marker")
+        _googleMap.value?.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(
+                marker.position,
+                DEFAULT_ZOOM_LEVEL
+            )
+        )
+    }
+
+    fun setSelectCampingSite(selectedCampingSite: CampingSite) {
+        _campingSite.value = selectedCampingSite
+    }
+
+
 }

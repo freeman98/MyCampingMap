@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-parcelize")
     alias(libs.plugins.googleServices)
+    id("kotlin-kapt")
+    kotlin("kapt")
 }
 
 android {
@@ -52,8 +54,15 @@ android {
 }
 
 dependencies {
+    implementation(libs.lifecycle.viewmodel.ktx)
+    implementation (libs.ui)
+    implementation (libs.ui.tooling.preview)
+//    implementation (libs.androidx.room.runtime)
+//    implementation (libs.androidx.room.ktx)
+    implementation ("androidx.room:room-runtime:2.6.1")
+    implementation ("androidx.room:room-ktx:2.6.1")
+    kapt ("androidx.room:room-compiler:2.6.1") // Kapt 사용
     implementation (libs.lifecycle.viewmodel.compose)
-//    implementation (libs.play.services.maps)
     implementation (libs.play.services.location)
     implementation (libs.places)
     implementation (libs.androidx.material)
@@ -70,7 +79,6 @@ dependencies {
     implementation (libs.retrofit)
     implementation (libs.converter.gson)
     implementation (libs.adapter.rxjava3)
-//    implementation ("io.reactivex.rxjava3:rxjava:3.1.5")
     implementation (libs.rxandroid)
     implementation (libs.play.services.maps.v1900)
     implementation (libs.places)

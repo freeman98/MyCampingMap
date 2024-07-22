@@ -10,11 +10,15 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.MutableLiveData
 import com.example.testcomposeui.MyApplication
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.LatLng
+import kotlin.math.pow
 
 object MyLocation {
 
@@ -139,4 +143,17 @@ object MyLocation {
             true
         }
     }
+
+    fun parseLatLng(latLngString: String): LatLng? {
+        // 정규식으로 lat/lng 추출
+        val regex = Regex("lat/lng: \\(([^,]+),([^\\)]+)\\)")
+        val matchResult = regex.find(latLngString)
+        return if (matchResult != null) {
+            val (lat, lng) = matchResult.destructured
+            LatLng(lat.toDouble(), lng.toDouble())
+        } else {
+            null
+        }
+    }
+
 }

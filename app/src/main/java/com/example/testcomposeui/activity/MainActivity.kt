@@ -1,21 +1,15 @@
 package com.example.testcomposeui.activity
 
-import android.content.Intent
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.testcomposeui.compose.MainTopAppBar
-import com.example.testcomposeui.data.Const.Companion.RC_SIGN_IN
+import androidx.navigation.compose.rememberNavController
+import com.example.testcomposeui.compose.NavGraph
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.common.api.ApiException
-import com.google.firebase.auth.GoogleAuthProvider
 
 class MainActivity : BaseActivity() {
 
@@ -28,37 +22,14 @@ class MainActivity : BaseActivity() {
         setContent {
             TestComposeUITheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    MainTopAppBar()
+                    val navController = rememberNavController()
+                    NavGraph(navController = navController)
                 }
             }
         }
 
-//        checkPermission()
-//        signIn()
     }
 
-
-//    private fun signIn() {
-//        //Gmail 로그인.
-//        val signInIntent = googleSignInClient.signInIntent
-//        startActivityForResult(signInIntent, RC_SIGN_IN)
-//    }
-
-//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-//        super.onActivityResult(requestCode, resultCode, data)
-////        super.onActivityResult(requestCode, resultCode, data)
-//        //로그인 결과.
-//
-//        if (requestCode == RC_SIGN_IN) {
-//            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-//            try {
-//                val account = task.getResult(ApiException::class.java)!!
-//                firebaseAuthWithGoogle(account.idToken!!)
-//            } catch (e: ApiException) {
-//                Toast.makeText(this, "Google 로그인 실패: ${e.message}", Toast.LENGTH_SHORT).show()
-//            }
-//        }
-//    }
 
 //    private fun firebaseAuthWithGoogle(idToken: String) {
 ////        Log.d(TAG, "firebaseAuthWithGoogle() idToken = $idToken")
@@ -82,7 +53,7 @@ class MainActivity : BaseActivity() {
 @Composable
 fun GreetingPreview() {
     TestComposeUITheme {
-//        MyApp(modifier = Modifier.fillMaxSize())
-//        MainTopAppBar(requestPermissionLauncher = )
+        val navController = rememberNavController()
+        NavGraph(navController = navController)
     }
 }
