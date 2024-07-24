@@ -16,10 +16,12 @@ import kotlinx.coroutines.withContext
 
 open class BaseViewModel : ViewModel() {
 
+    //LiveData를 이용한 이벤트 버스
     object LiveDataBus {
-        //LiveData를 이용한 이벤트 버스
-        val _selectCampingSite: MutableLiveData<Event<CampingSite>> = MutableLiveData<Event<CampingSite>>()
-        val selectCampingSite: LiveData<Event<CampingSite>> = _selectCampingSite
+
+        //메인화면에서 선택한 캠핑장 1회성 이벤트
+        val _selectCampingSite: MutableLiveData<Event<CampingSite?>> = MutableLiveData<Event<CampingSite?>>()
+        val selectCampingSite: LiveData<Event<CampingSite?>> = _selectCampingSite
 
         //내 위치.
         val _currentMyLocation = MutableLiveData<Location?>()
@@ -27,10 +29,15 @@ open class BaseViewModel : ViewModel() {
 
     }
 
+    //로딩 컨트롤을 위한 LiveData
+    val _isLoading = MutableLiveData<Boolean>()
+    val isLoading: LiveData<Boolean> get() = _isLoading
+
     open fun selectCampingSite(campingSite: CampingSite) {
         _selectCampingSite.value = Event(campingSite)
     }
 
+    // LiveData를 이용한 1회성 이벤트
     class Event<out T>(private val content: T) {
 
         private var hasBeenHandled = false
@@ -41,19 +48,37 @@ open class BaseViewModel : ViewModel() {
             } else {
                 hasBeenHandled = true
                 content
-            }
+            }//                    CampingDataUtil.syncCampingSites(localSites, remoteSites) { syncCampingSites ->
+//                        MyLog.d(TAG, "syncCampingSites() localSites.size = " +
+//                                "${localSites.size}, remoteSites.size = ${remoteSites.size}")
+//                        _syncAllCampingList.value = syncCampingSites
+//                        MyLog.d(TAG, "syncCampingSites() syncCampingSites.size = ${syncCampingSites.size}")
+//                    }
         }
 
         fun peekContent(): T = content
     }
 
-    private val campingSiteRepository: CampingSiteRepository
-    val allCampingSites: LiveData<List<CampingSite>>
+    val campingSiteRepository: CampingSiteRepository
+//    val dbAllCampingSites: LiveData<List<CampingSite>>
 
     init {
         val campingSiteDao = CampingSiteDatabase.getDatabase(MyApplication.context).campingSiteDao()
         campingSiteRepository = CampingSiteRepository(campingSiteDao)
-        allCampingSites = campingSiteRepository.allCampingSites
+//        dbAllCampingSites = campingSiteRepository.allCampingSites
+    }
+
+    suspend fun dbAllCampingSiteSelect(): List<CampingSite> {
+        // 캠핑장 전체 조회
+        return campingSiteRepository.allCampingList()
+//        try {
+//            campingSiteRepository.allCampingList()
+//            withContext(Dispatchers.Main) {
+//                onSuccess(true)
+//            }
+//        } catch (e: Exception) {
+//            withContext(Dispatchers.Main) { onSuccess(true) }
+//        }
     }
 
     fun dbCampingSiteInsert(

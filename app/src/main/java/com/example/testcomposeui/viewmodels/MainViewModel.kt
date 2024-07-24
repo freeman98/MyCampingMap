@@ -1,21 +1,28 @@
 package com.example.testcomposeui.viewmodels
 
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.testcomposeui.MyApplication
+import com.example.testcomposeui.auth.FirebaseManager.deleteFirebaseCampingSite
+import com.example.testcomposeui.auth.FirebaseManager.emailSignIn
+import com.example.testcomposeui.auth.FirebaseManager.emailSignUp
+import com.example.testcomposeui.auth.FirebaseManager.firebaseAuthTokenLogin
+import com.example.testcomposeui.auth.FirebaseManager.getAllFirebaseCampingSites
+import com.example.testcomposeui.data.CampingDataUtil
 import com.example.testcomposeui.db.CampingSite
+import com.example.testcomposeui.db.LoginType
 import com.example.testcomposeui.db.User
 import com.example.testcomposeui.db.UserDao
 import com.example.testcomposeui.db.UserDatabase
+import com.example.testcomposeui.utils.MyLog
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 //MVVM 모델 과 컴포스를 적용
@@ -26,24 +33,46 @@ class MainViewModel : BaseViewModel() {
     private val userDao: UserDao = UserDatabase.getDatabase(MyApplication.context).userDao()
     val user: LiveData<User?> = userDao.getUser().asLiveData()
 
-    fun getLoginUser(onComplete: (User?) -> Unit) {
-        viewModelScope.launch {
-            userDao.getUser().collect { user ->
-                Log.d(TAG, "getLoginUser() = $user")
-                onComplete(user)
-            }
-        }
-    }
+    // 내 캠핑장 리스트 정보
+    private val _syncAllCampingList = MutableLiveData<List<CampingSite>>()
+    val syncAllCampingList: LiveData<List<CampingSite>> = _syncAllCampingList
 
-    fun checkUser(user: User, onComplete: (Boolean, String) -> Unit) {
+    //파이어베이스 캠핑장 리스트 정보
+    private val _firebaseCampingSites = MutableLiveData<List<CampingSite>>()
+    val firebaseCampingSites: LiveData<List<CampingSite>> = _firebaseCampingSites
+
+    private val _dbAllCampingSites = MutableLiveData<List<CampingSite>>()
+    val dbAllCampingSites: LiveData<List<CampingSite>> = _dbAllCampingSites
+
+//    fun getLoginUser(onComplete: (User?) -> Unit) {
+//        viewModelScope.launch {
+//            userDao.getUser().collect { user ->
+//                MyLog.d(TAG, "getLoginUser() = $user")
+//                onComplete(user)
+//            }
+//        }
+//    }
+
+    fun loginTypeCheckUser(user: User, onComplete: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             //db에 저장된 사용자 정보를 이용하여 로그인 신청.
-            Log.d(TAG, "checkUser() = $user")
-            emailLogin(
-                email = user.email,
-                password = user.password,
-                onComplete = onComplete
-            )
+            MyLog.d(TAG, "checkUser() = $user")
+            when (user.loginType) {
+                LoginType.EMAIL -> { /* 이메일 로그인 */
+                    emailLogin(
+                        email = user.email,
+                        password = user.password,
+                        onComplete = onComplete
+                    )
+                }
+
+                LoginType.GOOGLE -> { /* 구글 로그인 */
+                }
+
+                LoginType.FACEBOOK -> { /* 페이스북 로그인 */
+                }
+            }
+
         }
     }
 
@@ -55,79 +84,49 @@ class MainViewModel : BaseViewModel() {
         onComplete: (Boolean, String) -> Unit
     ) {
         // 파이어베이스 이메일 로그인.
-        Log.d(TAG, "emailLogin() = $email, $password")
-        FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    // 로그인 성공
-                    firebaseAuthTokenLogin(email = email, password = password, saveUserData = saveUserData,
-                        onComplete)
-                }
-            }.addOnFailureListener { exception ->
-                if (exception is FirebaseAuthException) {
-                    val errorCode = exception.errorCode
-                    Log.e(TAG, "로그인 실패: ${exception.message}")
-                    when (errorCode) {
-                        "ERROR_INVALID_EMAIL" -> onComplete(false, "잘못된 이메일 형식입니다.")
-                        "ERROR_WRONG_PASSWORD" -> onComplete(false, "비밀번호가 틀렸습니다.")
-                        "ERROR_USER_NOT_FOUND" -> onComplete(false, "사용자를 찾을 수 없습니다.")
-                        "ERROR_USER_DISABLED" -> onComplete(false, "계정이 비활성화 되었습니다.")
-                        "ERROR_INVALID_CREDENTIAL" -> onComplete(false, "잘못된 자격 증명입니다.")
-                        else -> onComplete(false, "로그인 실패: ${exception.message}")
+        MyLog.d(TAG, "emailLogin() = $email, $password")
+        val auth = FirebaseAuth.getInstance()
+        emailSignIn(email = email, password = password) { success, message ->
+            if (success) firebaseAuthTokenLogin { success, message ->
+                if (success) {
+                    auth.currentUser?.let { firebaseUser ->
+                        viewModelScope.launch {
+                            // 사용자 정보를 데이터베이스에 저장
+                            if (saveUserData) userDaoInsert(
+                                firebaseUser = firebaseUser,
+                                email = email,
+                                password = password
+                            )
+                            onComplete(true, "계정 생성에 성공 하였습니다.")
+                        }
                     }
                 } else {
-                    onComplete(false, "로그인 실패: ${exception.message}")
+                    onComplete(false, message ?: "로그인 실패")
                 }
+            } else {
+                onComplete(false, message ?: "로그인 실패")
             }
+        }
+
     }
 
     fun emailRegisterUser(email: String, password: String, onComplete: (Boolean, String) -> Unit) {
         // 파이어베이스 이메일 회원가입.
-        Log.d(TAG, "emailRegisterUser() = $email, $password")
+        MyLog.d(TAG, "emailRegisterUser() = $email, $password")
         val auth = FirebaseAuth.getInstance()
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    // 이메일 등록 성공 - 새 사용자 처리
-                    firebaseAuthTokenLogin(email, password, true, onComplete)
-                } else {
-                    //가입 실패.
-                    try {
-                        throw task.exception!!
-                    } catch (existEmail: FirebaseAuthUserCollisionException) {
-                        // 이메일이 이미 사용 중임을 사용자에게 알림
-                        onComplete(false, "이 이메일 주소는 이미 사용 중입니다.")
-                    } catch (e: Exception) {
-                        // 기타 잠재적인 예외 처리
-                        onComplete(false, "등록 실패")
-                    }
-                }
-            }
-    }
-
-    private fun firebaseAuthTokenLogin(
-        email: String, password: String, saveUserData: Boolean,
-        onComplete: (Boolean, String) -> Unit
-    ) {
-        // 파이어베이스 인증
-        val auth = FirebaseAuth.getInstance()
-        auth.currentUser?.getIdToken(true)
-            ?.addOnCompleteListener { idTokenTask ->
-                if (idTokenTask.isSuccessful) {
-                    val idToken = idTokenTask.result?.token
-//                    Log.d(TAG, "registerUser() idTokenTask.isSuccessful = $idToken")
+        emailSignUp(email, password) { success, message ->
+            if (success) firebaseAuthTokenLogin { success, message ->
+                if (success) {
                     auth.currentUser?.let { firebaseUser ->
-                        viewModelScope.launch {
-                            // 사용자 정보를 데이터베이스에 저장
-                            if (saveUserData) userDaoInsert(firebaseUser, email, password)
-                            onComplete(true, "계정 생성에 성공 하였습니다.")
-                        }
+                        onComplete(success, message ?: "회원 가입 성공")
                     }
-
                 } else {
-                    onComplete(false, "계정 생성에 실패 하였습니다.")
+                    onComplete(success, message ?: "회원 가입 실패")
                 }
+            } else {
+                onComplete(success, message)
             }
+        }
     }
 
     suspend fun userDaoInsert(firebaseUser: FirebaseUser, email: String, password: String) {
@@ -148,7 +147,7 @@ class MainViewModel : BaseViewModel() {
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     // 성공 처리
-                    Log.d(TAG, "signInWithCredential:success")
+                    MyLog.d(TAG, "signInWithCredential:success")
                 } else {
                     // 실패 처리
                     Log.w(TAG, "signInWithCredential:failure", task.exception)
@@ -156,83 +155,75 @@ class MainViewModel : BaseViewModel() {
             }
     }
 
-    private val _my_camping_list = MutableLiveData<List<CampingSite>>()
-    val my_camping_list: LiveData<List<CampingSite>> = _my_camping_list
+//    fun getFirebaseCampingSite(): List<CampingSite> {
+//        //파이어베이스 캠핑장 정보 가져오기.
+//        val remoteSites = _firebaseCampingSites.value ?: emptyList()
+//        MyLog.d(TAG, "getFirebaseCampingSite() Size = ${remoteSites.size}")
+//        if (_firebaseCampingSites.value == null) {
+            //파이어스토어 데이터베이스에 저장된 캠핑장 정보 가져오기. - 최초에만.
+//            getAllFierbaseCampingSites { success, remoteSites ->
+//                if (success) {
+//                    _firebaseCampingSites.value = remoteSites
+//                } else {
+//                    Toast.makeText(MyApplication.context, "서버에서 캠핑장 목록 가져오기 실패", Toast.LENGTH_SHORT)
+//                        .show()
+//                }
+//            }
+//        }
+//    }
 
-    fun checkUserExists(userId: String, onResult: (Boolean) -> Unit) {
-        val db = FirebaseFirestore.getInstance()
-        db.collection("users").document(userId)
-            .get()
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
-                    onResult(true) // 기존 회원
+    fun syncCampingSites() {
+        if(isDeleting) return
+        _isLoading.value = true
+        MyLog.d(TAG, "syncCampingSites()")
+        viewModelScope.launch {
+            val dbAllCampingSiteSelect = async { dbAllCampingSiteSelect() }
+            val fierbaseCampingSites = async { getAllFirebaseCampingSites() }
+            val localSites = dbAllCampingSiteSelect.await()
+            val remoteSites = fierbaseCampingSites.await()
+            MyLog.d(TAG, "syncCampingSites() localSites.size : ${localSites.size}")
+            MyLog.d(TAG, "syncCampingSites() remoteSites.size : ${remoteSites.size}")
+            _syncAllCampingList.value = localSites + remoteSites
+
+            val syncCampingSites = CampingDataUtil.syncCampingSites(
+                localSites, remoteSites,
+                campingSiteRepository, this
+            )
+            MyLog.d(TAG, "syncCampingSites() syncCampingSites.size : ${syncCampingSites.size}")
+            _syncAllCampingList.value = syncCampingSites
+
+            _isLoading.value = false
+        }
+    }
+
+    // 캠핑장 삭제 플레그 - 삭제중에 데이터 싱크가 일어나지 않게 하기 위해.
+    private var isDeleting: Boolean = false
+
+    fun deleteCampingSite(campingSite: CampingSite) {
+        isDeleting = true
+        dbCampingSiteDelete(campingSite) {
+            //db 캠핑장 정보 삭제.
+            MyLog.d(TAG, "dbCampingSiteDelete() = $it")
+            //파이어스토어 데이터베이스에 저장된 캠핑장 정보 삭제.
+            deleteFirebaseCampingSite(campingSite) { success ->
+                if (success) {
+                    deleteCampingList(campingSite.id)
+                    Toast.makeText(MyApplication.context, "삭제 성공", Toast.LENGTH_SHORT).show()
                 } else {
-                    onResult(false) // 최초 가입
+                    Toast.makeText(MyApplication.context, "삭제 실패", Toast.LENGTH_SHORT).show()
                 }
+                isDeleting = false
             }
-            .addOnFailureListener { exception ->
-                Log.w(TAG, "Error getting document: ", exception)
-                onResult(false) // 오류 발생 시 최초 가입으로 간주
-            }
-    }
-
-
-    fun getAllCampingSites(onComplete: (Boolean) -> Unit) {
-        //파이어스토어 데이터베이스에 저장된 캠핑장 정보 가져오기.
-        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
-            Log.d(TAG, "getAllCampingSites() = $uid")
-            val db = FirebaseFirestore.getInstance()
-            db.collection("users").document(uid)
-                .collection("my_camping_list")
-                .get()
-                .addOnSuccessListener { result ->
-                    Log.d(TAG, "getAllCampingSites() addOnSuccessListener = $result")
-                    val campingSites = mutableListOf<CampingSite>()
-                    for (document in result) {
-                        val campingSite = document.toObject(CampingSite::class.java)
-//                        Log.d(TAG, "getAllCampingSites() campingSite = $campingSite")
-                        campingSites.add(campingSite)
-                    }
-                    _my_camping_list.value = campingSites
-                    onComplete(true)
-                }
-                .addOnFailureListener { e ->
-//                onComplete(emptyList())
-                    Log.e(TAG, "Error getting documents: ", e)
-                    _my_camping_list.value = emptyList()
-                    onComplete(false)
-                }
         }
     }
 
-    fun deleteCampingSite(id: String, onComplete: (Boolean) -> Unit) {
-        //파이어스토어 데이터베이스에 저장된 캠핑장 정보 삭제.
-        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
-            Log.d(TAG, "deleteCampingSite() = $uid")
-            val db = FirebaseFirestore.getInstance()
-            db.collection("users").document(uid)
-                .collection("my_camping_list").document(id)
-                .delete()
-                .addOnSuccessListener {
-                    Log.d(TAG, "DocumentSnapshot successfully deleted!")
-                    // 삭제 성공 처리
-                    _my_camping_list.value = deleteCampingList(id)
-                    onComplete(true)
-                }
-                .addOnFailureListener { e ->
-                    println("Error deleting document: $e")
-                    // 삭제 실패 처리
-                    onComplete(false)
-                }
+    fun deleteCampingList(id: String) {
+        //db 캠핑장 정보 삭제.
+        _syncAllCampingList.value?.let { campingSites ->
+            val updatedList = campingSites.toMutableList()
+            updatedList.removeAll { it.id == id }
+            _syncAllCampingList.value = updatedList
         }
-    }
-
-    fun deleteCampingList(id: String): MutableList<CampingSite> {
-        val campingSites: MutableList<CampingSite> =
-            _my_camping_list.value as MutableList<CampingSite>
-        campingSites.removeIf { it.id == id }
-        return campingSites
-
     }
 
 }

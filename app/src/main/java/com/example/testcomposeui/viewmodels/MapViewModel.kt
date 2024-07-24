@@ -15,11 +15,13 @@ import androidx.lifecycle.MutableLiveData
 import com.example.testcomposeui.MyApplication
 import com.example.testcomposeui.MyApplication.Companion.context
 import com.example.testcomposeui.R
+import com.example.testcomposeui.auth.FirebaseManager.addFirebaseCampingSite
+import com.example.testcomposeui.auth.FirebaseManager.firebaseSaveUser
 import com.example.testcomposeui.data.CampingDataUtil.createCampingSiteData
 import com.example.testcomposeui.db.CampingSite
 import com.example.testcomposeui.utils.MyLocation
 import com.example.testcomposeui.utils.MyLocation.parseLatLng
-import com.example.testcomposeui.viewmodels.BaseViewModel.LiveDataBus._selectCampingSite
+import com.example.testcomposeui.utils.MyLog
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -75,8 +77,9 @@ class MapViewModel : BaseViewModel() {
 
     }
 
-    private val _campingSite = MutableLiveData<CampingSite>()
-    val campingSite: LiveData<CampingSite> get() = _campingSite
+    //
+    private val _selectCampingSite = MutableLiveData<CampingSite>()
+    val selectCampingSite: LiveData<CampingSite> get() = _selectCampingSite
 
     private val _isSearchListVisible = MutableLiveData<Boolean>()
     val isSearchListVisible get() = _isSearchListVisible
@@ -109,7 +112,7 @@ class MapViewModel : BaseViewModel() {
     val googleMap: LiveData<GoogleMap?> get() = _googleMap
 
     fun setGoogleMap(map: GoogleMap) {
-        Log.d(TAG, "setGoogleMap()")
+        MyLog.d(TAG, "setGoogleMap()")
         _googleMap.value = map
 
         //초기 위치. 설정 및 카메라 이동.
@@ -141,14 +144,35 @@ class MapViewModel : BaseViewModel() {
         //지도 클릭 이벤트.
         map.setInfoWindowAdapter(CustomInfoWindowAdapter(context))
 
+        //지도 롱터치 이벤트 - 해당 터치 위치를 중심으로 대략적인 화면 범위 내에 있는 캠핑장 검색.
+        map.setOnMapLongClickListener { latLng ->
+            MyLog.d(TAG, "setOnMapClickListener() latLng = $latLng")
+            //placesClient을 이용하여 클릭한 지도 근방의 지도 정보를 가져온다.
+            searchNearbyPlaces(latLng) { places ->
+//                MyLog.d(TAG, "searchNearbyPlaces() = $it")
+                removeAllMarkers()
+                addMapMarkers(places)
+            }
+        }
+
+        map.setOnInfoWindowClickListener { marker ->
+            val place = _markerPlaceMap.value?.get(marker)
+            MyLog.d(TAG, "OnInfoWindowClickListener() $place")
+        }
+
+//        MyLog.d(TAG, "_selectCampingSite.value = ${_selectCampingSite.value}")
+        // 메인화면에서 선택한 캠핑 사이트가 있으면 내위치 초기화를 하지 않는다.
+        if (_selectCampingSite.value != null) return
+
+        // 내 위치 찾기.
         LiveDataBus._currentMyLocation.value?.let {
             //저장된 내위치가 있을경우.
-            Log.d(TAG, "currentMyLocation = $it")
+            MyLog.d(TAG, "currentMyLocation = $it")
             val latlng = LatLng(it.latitude, it.longitude)
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(latlng, DEFAULT_ZOOM_LEVEL))
 
         } ?: run {
-            Log.d(TAG, "currentMyLocation = null")
+            MyLog.d(TAG, "currentMyLocation = null")
             //저장된 내위치가 없을경우 - 내 위치 찾기.
             myCurrentLocation { isSuccess, _, _ ->
                 if (!isSuccess) {
@@ -163,23 +187,7 @@ class MapViewModel : BaseViewModel() {
             }
         }
 
-        //지도 롱터치 이벤트 - 해당 터치 위치를 중심으로 대략적인 화면 범위 내에 있는 캠핑장 검색.
-        map.setOnMapLongClickListener { latLng ->
-            Log.d(TAG, "setOnMapClickListener() latLng = $latLng")
-            //placesClient을 이용하여 클릭한 지도 근방의 지도 정보를 가져온다.
-            searchNearbyPlaces(latLng) { places ->
-//                Log.d(TAG, "searchNearbyPlaces() = $it")
-                removeAllMarkers()
-                addMapMarkers(places)
-            }
-        }
-
-        map.setOnInfoWindowClickListener { marker ->
-            val place = _markerPlaceMap.value?.get(marker)
-            Log.d(TAG, "OnInfoWindowClickListener() $place")
-        }
-
-    }
+    }   // setGoogleMap
 
     class CustomInfoWindowAdapter(context: Context) : GoogleMap.InfoWindowAdapter {
         // 마커 클릭 시 나오는 말풍선 커스텀
@@ -279,7 +287,7 @@ class MapViewModel : BaseViewModel() {
 
     fun setMyLocationMarker(myLocation: Location) {
         //내위치에 마커를 찍고 이동.
-        Log.d(TAG, "setMyLocationMarker()")
+        MyLog.d(TAG, "setMyLocationMarker()")
         _googleMap.value?.let { map ->
             val myLatLng = LatLng(myLocation.latitude, myLocation.longitude)
             val cameraUpdate = CameraUpdateFactory.newLatLngZoom(myLatLng, DEFAULT_ZOOM_LEVEL)
@@ -325,7 +333,7 @@ class MapViewModel : BaseViewModel() {
 
     // 모든 마커를 삭제하는 함수
     private fun removeAllMarkers() {
-        Log.d(TAG, "removeAllMarkers()")
+        MyLog.d(TAG, "removeAllMarkers()")
         _markerPlaceMap.value?.let { map ->
             if (map.isEmpty()) return
             for (marker in map.keys) {
@@ -337,7 +345,7 @@ class MapViewModel : BaseViewModel() {
 
     fun gotoFirstPlace(map: MutableMap<Marker, Place>) {
         //첫번쨰 장소로 지도 이동.
-        Log.d(TAG, "gotoFastPlace()")
+        MyLog.d(TAG, "gotoFastPlace()")
         var count = 0
         map.let {
             it.forEach { (marker, place) ->
@@ -352,7 +360,7 @@ class MapViewModel : BaseViewModel() {
 
     //검색 버튼.
     fun searchPlace(searchText: String) {
-        Log.d(TAG, "searchPlac() = $searchText")
+        MyLog.d(TAG, "searchPlac() = $searchText")
         searchText(searchText) { places ->
             removeAllMarkers()
             addMapMarkers(places)
@@ -378,7 +386,7 @@ class MapViewModel : BaseViewModel() {
     }
 
     fun gotoPlace(place: Place?) {
-        Log.d(TAG, "gotoPlace()")
+        MyLog.d(TAG, "gotoPlace()")
         //파라미터로 넘어오는 Place를 기준으로 지도 이동.
         place?.latLng?.let {
             _googleMap.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 16f))
@@ -390,7 +398,7 @@ class MapViewModel : BaseViewModel() {
         mpaLiveData.value?.let { map ->
             val zoomLevel = map.cameraPosition.zoom
             val mapWidthInPixels = MyApplication.context.resources.displayMetrics.widthPixels
-//            Log.d(TAG, "zoomLevel = $zoomLevel")
+//            MyLog.d(TAG, "zoomLevel = $zoomLevel")
 
             val worldSize = 40075016.686 // Earth's circumference in meters
             val scale = 2.0.pow(zoomLevel.toDouble()) // 2^zoomLevel
@@ -400,28 +408,32 @@ class MapViewModel : BaseViewModel() {
             val radius =
                 ((mapWidthMeters * mapWidthInPixels) / (2 * 256)) / 2 // 256 is the tile size in pixels
             //최대 반지름은 50000m
-            Log.d(TAG, "radius = $radius")
+            MyLog.d(TAG, "radius = $radius")
             return if (radius < 50000.0) radius else 50000.0
         }
         return 0.0
     }
 
     fun insertCampingSite(
-        place: Place,
-        onSuccess: (Boolean) -> Unit,
+        place: Place
     ) {
         // db에 캠핑장 추가.
-        Log.d(TAG, "insertCampingSite()")
-        dbCampingSiteInsert(createCampingSiteData(place), onSuccess = onSuccess)
-    }
-
-    fun clearSelectedCampingSite() {
-        _selectCampingSite.value = null
+        MyLog.d(TAG, "insertCampingSite()")
+        dbCampingSiteInsert(createCampingSiteData(place)) { success ->
+            //db 저장.
+            if (success) {
+                //firebase 유져 저장.
+                firebaseSaveUser { success, user, message ->
+                    //firebase 캠핑장 저장.
+                    if (success) addFirebaseCampingSite(user, place)
+                }
+            }
+        }
     }
 
     fun selectCampingSiteMarker(campingSite: CampingSite) {
         // 메인리스트에서 선택한 캠팡장을 지도에 위치한다.
-        Log.d(TAG, "selectCampingSiteMarker() = $campingSite")
+        MyLog.d(TAG, "selectCampingSiteMarker() = $campingSite")
         val latLng = parseLatLng(campingSite.location)
         latLng?.let {
             val markerOption = createMarkerOptions(
@@ -439,8 +451,8 @@ class MapViewModel : BaseViewModel() {
     }
 
     private fun gotoLatLng(marker: Marker) {
-        Log.d(TAG, "gotoLatLng() marker = $marker")
-        _googleMap.value?.animateCamera(
+        MyLog.d(TAG, "gotoLatLng() marker = $marker")
+        _googleMap.value?.moveCamera(
             CameraUpdateFactory.newLatLngZoom(
                 marker.position,
                 DEFAULT_ZOOM_LEVEL
@@ -449,7 +461,8 @@ class MapViewModel : BaseViewModel() {
     }
 
     fun setSelectCampingSite(selectedCampingSite: CampingSite) {
-        _campingSite.value = selectedCampingSite
+        // 메인리스트에서 선택한 캠핑장
+        selectedCampingSite.also { _selectCampingSite.value = it }
     }
 
 

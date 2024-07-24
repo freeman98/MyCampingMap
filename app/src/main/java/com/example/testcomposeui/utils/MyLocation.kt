@@ -34,7 +34,7 @@ object MyLocation {
      * 조회할 수 없다면 마지막 위치 값 사용(as-is 코드: getLastKnownLocation)
      */
     fun requestLocation(onResult: (Boolean, String, String) -> Unit) {
-        Log.d(TAG, "requestLocation()")
+        MyLog.d(TAG, "requestLocation()")
         try {
             val isGrant = ActivityCompat.checkSelfPermission(MyApplication.context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                     || ActivityCompat.checkSelfPermission(MyApplication.context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -98,8 +98,8 @@ object MyLocation {
             // [설정] - [위치] - [위치 서비스] - [Google 위치 정확도] - [위치 정확도 개선]  on/off 설정값.
             var network_provider = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
             val gps_provider = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-            Log.d(TAG,"servicesEnabled() network_provider = $network_provider")
-            Log.d(TAG,"servicesEnabled() gps_provider = $gps_provider")
+            MyLog.d(TAG,"servicesEnabled() network_provider = $network_provider")
+            MyLog.d(TAG,"servicesEnabled() gps_provider = $gps_provider")
             return network_provider || gps_provider
         } ?: run {
             return false
@@ -111,7 +111,7 @@ object MyLocation {
         (MyApplication.context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager)?.let { locationManager ->
             // [설정] - [위치] - [위치 서비스] - [Google 위치 정확도] - [위치 정확도 개선]  on/off 설정값.
             val gps_provider = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-            Log.d(TAG,"gpsServicesEnabled() gps_provider = $gps_provider")
+            MyLog.d(TAG,"gpsServicesEnabled() gps_provider = $gps_provider")
             return gps_provider
         } ?: run {
             return false
@@ -121,7 +121,7 @@ object MyLocation {
     fun networkServicesEnabled(): Boolean {
         (MyApplication.context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager)?.let { locationManager ->
             var network_provider = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-            Log.d(TAG,"networkServicesEnabled() network_provider = $network_provider")
+            MyLog.d(TAG,"networkServicesEnabled() network_provider = $network_provider")
             return network_provider
         } ?: run {
             return false
@@ -134,8 +134,8 @@ object MyLocation {
             val permission_fine_location = MyApplication.context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
             //대략적인 위치 권한
             val permission_coarse_location = MyApplication.context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-            Log.d(TAG,"permission_fine_location = $permission_fine_location")
-            Log.d(TAG,"permission_coarse_location = $permission_coarse_location")
+            MyLog.d(TAG,"permission_fine_location = $permission_fine_location")
+            MyLog.d(TAG,"permission_coarse_location = $permission_coarse_location")
 
             permission_fine_location == PackageManager.PERMISSION_GRANTED ||
                     permission_coarse_location == PackageManager.PERMISSION_GRANTED

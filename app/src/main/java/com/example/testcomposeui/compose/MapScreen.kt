@@ -58,8 +58,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.testcomposeui.R
-import com.example.testcomposeui.data.CampingDataUtil.addFirebaseCampingSite
-import com.example.testcomposeui.data.UserDataUtil.firebaseSaveUser
+import com.example.testcomposeui.auth.FirebaseManager.addFirebaseCampingSite
+import com.example.testcomposeui.auth.FirebaseManager.firebaseSaveUser
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
 import com.example.testcomposeui.utils.IntentUtil.Companion.callPhone
 import com.example.testcomposeui.utils.IntentUtil.Companion.openWebPage
@@ -263,7 +263,7 @@ fun SearchListView(
         //placesList 값이 변경이 있을 경우에만.
         if (placesList.isNotEmpty()) {
             //검색 결과가 있을경우.
-//            Log.d(TAG, "placesList.size ${placesList.size}")
+//            MyLog.d(TAG, "placesList.size ${placesList.size}")
             viewModel.setSearchListVisible(true) //검색창 보이게.
             listState.scrollToItem(0)   //리스트 상단으로 이동.
         } else {
@@ -303,26 +303,13 @@ fun SearchListView(
                         viewModel.gotoPlace(selectPlace)
                         viewModel.setSearchListVisible(false)
                     },
-                    onClickCampingSite = { place ->
+                    onClickCampingSite = { savePlace ->
                         //캠핑장 저장.
-                        viewModel.insertCampingSite(place,
-                            onSuccess = { isSuccess ->
-                                //캠핑장 정보 저장
-                                if (isSuccess) {
-                                    firebaseSaveUser { isSuccess, user, message ->
-                                        //사용자 정보 저장 성공.
-                                        if (isSuccess) {
-                                            //캠핑장 정보 저장.
-                                            addFirebaseCampingSite(user, place)
-                                        }
-
-                                    }
-                                }
-                            }
-                        )
+                        viewModel.insertCampingSite(savePlace)
                     }
-                )
-            }
+
+                )   //SerchListViewCard
+            }   //items
         }
     }
 }
@@ -333,7 +320,7 @@ fun SerchListViewCard(
     onCardClick: (Place) -> Unit,
     onClickCampingSite: (Place) -> Unit
 ) {
-//    Log.d(TAG, "SerchListViewCard() $place")
+//    MyLog.d(TAG, "SerchListViewCard() $place")
     val typography = MaterialTheme.typography
     val elevation = CardDefaults.cardElevation(
         defaultElevation = 0.dp
@@ -424,7 +411,7 @@ fun MapView(viewModel: MapViewModel = viewModel()) {
     //지도에 표시될 Place map.
     val markerPlaceMap by viewModel.markerPlaceMap.observeAsState()
     // mainActivity 리스트에서 선택한 캠핑장
-    val selectedCampingSite by viewModel.campingSite.observeAsState()
+    val selectedCampingSite by viewModel.selectCampingSite.observeAsState()
 
     AndroidView(
         factory = { context ->
@@ -459,7 +446,6 @@ fun MapView(viewModel: MapViewModel = viewModel()) {
                     viewModel.setMyLocationMarker(myLocation)
                 }
             }
-
         }
 
         //지도에 표시될 Places 리스트가 있을경우 만 실행.

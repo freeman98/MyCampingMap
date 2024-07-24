@@ -30,23 +30,6 @@ class MainActivity : BaseActivity() {
 
     }
 
-
-//    private fun firebaseAuthWithGoogle(idToken: String) {
-////        Log.d(TAG, "firebaseAuthWithGoogle() idToken = $idToken")
-//        val credential = GoogleAuthProvider.getCredential(idToken, null)
-//        auth.signInWithCredential(credential)
-//            .addOnCompleteListener(this) { task ->
-//                if (task.isSuccessful) {
-//                    val user = auth.currentUser
-//                    Log.d(TAG, "firebaseAuthWithGoogle() user?.uid = ${user?.uid}")
-//                    Toast.makeText(this, "로그인 성공: ${user?.displayName}", Toast.LENGTH_SHORT).show()
-//                    // 로그인 성공 후 다음 화면으로 이동
-//                } else {
-//                    Toast.makeText(this, "인증 실패", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//    }
-
 }
 
 @Preview(showBackground = true)

@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +25,7 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +37,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,9 +58,7 @@ import com.example.testcomposeui.R
 import com.example.testcomposeui.activity.MapActivity
 import com.example.testcomposeui.db.CampingSite
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
-import com.example.testcomposeui.viewmodels.BaseViewModel
 import com.example.testcomposeui.viewmodels.MainViewModel
-import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun MainScreen(viewModel: MainViewModel = viewModel()) {
@@ -78,7 +77,8 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentAlignment = Alignment.Center
         ) {
             CampDataListView()
         }
@@ -112,8 +112,7 @@ fun CustomSmallTopAppBar(
         actions = {
             // 여기에 추가 액션 아이콘을 배치할 수 있습니다.
             IconButton(onClick = {
-//                Log.d(TAG, "actions IconButton()")
-
+//                MyLog.d(TAG, "actions IconButton()")
                 gotoMapActivity(context)
             }) {
                 Icon(
@@ -131,58 +130,55 @@ fun gotoMapActivity(context: Context) {
 }
 
 @Composable
-//fun CampDataListView(modifier: Modifier = Modifier, campDatas: List<CampData>) {
-fun CampDataListView(modifier: Modifier = Modifier, viewModel: MainViewModel = viewModel()
-                     ) {
+fun CampDataListView(
+    modifier: Modifier = Modifier, viewModel: MainViewModel = viewModel()
+) {
     Log.d(viewModel.TAG, "CampDataListView()")
     val context = LocalContext.current
-    val my_camping_list = viewModel.my_camping_list.observeAsState(initial = emptyList()).value
+    val syncAllCampingList by viewModel.syncAllCampingList.observeAsState(initial = emptyList())
+    val dbAllCampingSites by viewModel.dbAllCampingSites.observeAsState(initial = emptyList())
+    val firebaseCampingSites by viewModel.firebaseCampingSites.observeAsState(initial = emptyList())
+    val isLoading by viewModel.isLoading.observeAsState(false)
 
-    FirebaseAuth.getInstance().currentUser?.let { user ->
-        val userId = user.uid
-        // 이곳에서 Firestore에서 사용자 정보를 가져오는 함수를 호출합니다.
-        Log.d(viewModel.TAG, "CampDataListView() userId = $userId")
-    } ?: run {
-        Log.d(viewModel.TAG, "CampDataListView() userId is null")
-        Toast.makeText(context, "로그인이 필요합니다.", Toast.LENGTH_SHORT).show()
+//    LaunchedEffect(Unit) {
+//        //파이어베이스 사이트 정보가 변경될때 만 호출.
+//        viewModel.getFirebaseCampingSite()
+//    }
+//
+//    LaunchedEffect(dbAllCampingSites, firebaseCampingSites) {
+//        //db데이터 또는 파이어베이스 사이트 정보가 변경될때 만 호출.
+//        viewModel.syncCampingSites()
+//    }
+
+    LaunchedEffect(Unit) {
+        //db데이터 또는 파이어베이스 사이트 정보가 변경될때 만 호출.
+        viewModel.syncCampingSites()
     }
 
-    LaunchedEffect(my_camping_list) { //users값이 변경될때 블럭이 실행됨.
-//        mainViewModel.fetchUsers()
-        viewModel.getAllCampingSites { isComplete ->
-            Log.d(viewModel.TAG, "getAllCampingSites() isComplete = $isComplete")
-            if(!isComplete) {
-                //목록 가져오기 실패.
-                Toast.makeText(context, "목록 가져오기 실패", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    Log.d(viewModel.TAG, "CampDataListView() my_camping_list.size = ${my_camping_list.size}")
+    Log.d(viewModel.TAG, "CampDataListView() syncAllCampingList.size = ${syncAllCampingList.size}")
     //메모리 관리가 들어간 LazyColumn
-    LazyColumn(modifier = modifier.padding(vertical = 14.dp /*상하 패딩.*/)) {
-        items(my_camping_list) { my_camping_list ->
-            CampDataViewCard(my_camping_list,
-                //카드 클릭 이벤트
-                onCardClick = { campingSite ->
-                    Log.d(viewModel.TAG, "onCardClick() $campingSite")
-                    viewModel.selectCampingSite(campingSite)
-                    gotoMapActivity(context)
-                },
-                //
-                onCardDeleteClick = { id ->
-                    viewModel.deleteCampingSite(id) { isComplete ->
-                        if(isComplete) {
-                            //삭제 성공.
-                            Toast.makeText(context, "삭제 성공", Toast.LENGTH_SHORT).show()
-                        } else {
-                            //삭제 실패.
-                            Toast.makeText(context, "삭제 실패", Toast.LENGTH_SHORT).show()
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (isLoading) {
+            CircularProgressIndicator()
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(vertical = 14.dp /*상하 패딩.*/)) {
+                items(syncAllCampingList) { campingSites ->
+                    CampDataViewCard(campingSites,
+                        //카드 클릭 이벤트
+                        onCardClick = { campingSite ->
+//                    Log.d(viewModel.TAG, "onCardClick() $campingSite")
+                            viewModel.selectCampingSite(campingSite)
+                            gotoMapActivity(context)
+                        },
+                        //카드 삭제 이벤트.
+                        onCardDeleteClick = { campingSite ->
+                            viewModel.deleteCampingSite(campingSite)
                         }
-                    }
-                }
-            )
-        }
+
+                    )   //CampDataViewCard
+                }   //items
+            }   //LazyColumn
+        }   //if (isLoading)
     }
 }
 
@@ -195,9 +191,11 @@ fun CampDataViewCardPreview() {
 }
 
 @Composable
-fun CampDataViewCard(capingSite: CampingSite,
-                     onCardClick: (CampingSite) -> Unit,
-                     onCardDeleteClick: (String) -> Unit) {
+fun CampDataViewCard(
+    capingSite: CampingSite,
+    onCardClick: (CampingSite) -> Unit,
+    onCardDeleteClick: (CampingSite) -> Unit
+) {
     val typography = MaterialTheme.typography
     val elevation = CardDefaults.cardElevation(
         defaultElevation = 0.dp
@@ -242,7 +240,7 @@ fun CampDataViewCard(capingSite: CampingSite,
                 Button(onClick = {
                     // 삭제 버튼 클릭 시 처리
 //                    Log.d(viewModel.TAG, "CampDataViewCard() onClick() Delete ID = ${capingSite.id}")
-                    onCardDeleteClick(capingSite.id)
+                    onCardDeleteClick(capingSite)
                 }) {
                     Text(text = "삭제")
                 }

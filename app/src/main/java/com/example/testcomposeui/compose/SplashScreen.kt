@@ -18,7 +18,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieAnimatable
@@ -35,7 +34,7 @@ fun SplashScreen(
     navController: NavHostController,
     viewModel: MainViewModel = viewModel()
 ) {
-    Log.d("Splash", "SplashScreen() ")
+//    Log.d("Splash", "SplashScreen() ")
     val context = LocalContext.current
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.splash_animation))
     val lottieAnimatable = rememberLottieAnimatable()
@@ -60,7 +59,7 @@ fun SplashScreen(
         if (locationPermissionState.status.isGranted) {
             // 위치 권한이 허용 일때. - 로그인 처리 로직
             user?.let {
-                viewModel.checkUser(it) { success, message ->
+                viewModel.loginTypeCheckUser(it) { success, message ->
                     if (success) {
                         Log.d("Splash", "로그인 성공")
                         //로그인 성공시 메인화면으로 이동.
@@ -72,9 +71,6 @@ fun SplashScreen(
                     }
 
                 }
-            } ?: run {
-                Log.d("Splash", "로그인 정보가 없음")
-//                viewModel.getLoginUser {}
             }
         } else {
             // 위치 권한이 거부 일때.

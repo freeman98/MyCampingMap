@@ -13,22 +13,17 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.testcomposeui.compose.MapScreen
 import com.example.testcomposeui.ui.theme.TestComposeUITheme
+import com.example.testcomposeui.utils.MyLog
 import com.example.testcomposeui.viewmodels.BaseViewModel
 import com.example.testcomposeui.viewmodels.MapViewModel
 
 class MapActivity : ComponentActivity() {
 
-    val viewModel by viewModels<MapViewModel>()
+    private val viewModel by viewModels<MapViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-//        BaseViewModel.LiveDataBus.selectCampingSite.observe(this, Observer { user ->
-//            // User 데이터 사용
-//            user?.let {
-//                Log.d(TAG, "onCreate: $it")
-//            }
-//        })
 
         setContent {
             TestComposeUITheme {
@@ -37,7 +32,7 @@ class MapActivity : ComponentActivity() {
                 )
                 MapScreen(viewModel) {
                     //앱 종료
-                    Log.d(TAG, "MapActivity onBackPressed()")
+                    MyLog.d(TAG, "MapActivity onBackPressed()")
                     finish()
                 }
             }
@@ -45,8 +40,8 @@ class MapActivity : ComponentActivity() {
 
         BaseViewModel.LiveDataBus.selectCampingSite.observe(this, Observer { event ->
             event.getContentIfNotHandled()?.let { campingSite ->
-                Log.d(TAG, "event.getContentIfNotHandled(): $campingSite")
-                //일회성으로 캠핑장 사이트 정보를 처리 한다.
+                MyLog.d(TAG, "event.getContentIfNotHandled(): $campingSite")
+                //1회성으로 캠핑장 사이트 정보를 처리 한다.
                 viewModel.setSelectCampingSite(campingSite)
             }
         })

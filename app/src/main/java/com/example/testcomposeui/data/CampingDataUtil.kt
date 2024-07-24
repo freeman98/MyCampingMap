@@ -3,12 +3,19 @@ package com.example.testcomposeui.data
 import android.util.Log
 import android.widget.Toast
 import com.example.testcomposeui.MyApplication
+import com.example.testcomposeui.auth.FirebaseManager.addFirebaseCampingSites
 import com.example.testcomposeui.db.CampingSite
-import com.example.testcomposeui.db.User
+import com.example.testcomposeui.db.CampingSiteRepository
+import com.example.testcomposeui.utils.MyLog
 import com.google.android.libraries.places.api.model.Place
-import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 object CampingDataUtil {
+
+    val TAG = "CampingDataUtil"
 
     fun createCampingSiteData(place: Place): CampingSite {
         // 캠핑장 정보 객체 생성
@@ -24,24 +31,63 @@ object CampingDataUtil {
         )
     }
 
-    fun addFirebaseCampingSite(user: User, place: Place) {
-        //파이어스토어 데이터베이스에 저장.
-//    Log.d(TAG, "saveCampingSite() place= ${place}")
-        val campingSite = createCampingSiteData(place)
-        Log.d("MapScreen", "saveCampingSite() = $campingSite")
+    fun syncCampingSites(
+        localSites: List<CampingSite>,
+        remoteSites: List<CampingSite>,
+        campingSiteRepository: CampingSiteRepository,
+        coroutineScope: CoroutineScope
+    ): List<CampingSite> {
+        // 캠핑장 데이터 리스트 동기화
+        MyLog.d(TAG, "syncCampingSites()")
+        val mergedSites = getUniqueUnion(localSites, remoteSites)
+        findDifferences(localSites, remoteSites) { localOnly, remoteOnly ->
+            // 로컬 DB과 파이어베이스에 없는 캠핑장 정보
+            MyLog.d(TAG, "syncCampingSites() localOnly.size: ${localOnly.size}")
+            MyLog.d(TAG, "syncCampingSites() remoteOnly.size: ${remoteOnly.size}")
+            coroutineScope.launch(Dispatchers.IO) {
+                withContext(Dispatchers.IO) {
+                    // 파이어베이스에만 있는 캠핑장 정보는 db에 저장.
+                    if(remoteOnly.size > 0 ) {
+                        MyLog.d(TAG, "syncCampingSites() campingSiteRepository.insertAll")
+                        campingSiteRepository.insertAll(remoteOnly)
+                    }
+                    // db에만 있는 캠핑장 정보는 파이어베이스에 저장.
+                    if(localOnly.size > 0) {
+                        addFirebaseCampingSites(localOnly) {MyLog.d(TAG, "syncCampingSites() addFirebaseCampingSites()")
+                            if (!it) Toast.makeText( MyApplication.context, "캠핑장 정보 저장 실패", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+//        onSyncComplete(mergedSites)
+        return mergedSites
+    }
 
-        val db = FirebaseFirestore.getInstance()
-        db.collection("users").document(user.uid).collection("my_camping_list")
-            .document(campingSite.id).set(campingSite)
-            .addOnSuccessListener {
-                // 데이터 저장 성공
-                Log.d("", "addOnSuccessListener()")
-                Toast.makeText(MyApplication.context, "저장 성공", Toast.LENGTH_SHORT).show()
-            }
-            .addOnFailureListener { e ->
-                // 데이터 저장 실패
-                Log.w("", "addOnFailureListener() = ", e)
-                Toast.makeText(MyApplication.context, "저장 실패", Toast.LENGTH_SHORT).show()
-            }
+    private fun getUniqueUnion(
+        // 캠핑장 리스트가 다를 경우 동기화 작업
+        localSites: List<CampingSite>,
+        remoteSites: List<CampingSite>
+    ): List<CampingSite> {
+        val allSites = (localSites + remoteSites)
+        //
+        return allSites.distinctBy { it.id }
+    }
+
+    private fun findDifferences(
+        //캠핑장 리스트가 다를 경우 동기화 작업
+        localCampingSites: List<CampingSite>,
+        remoteCampingSites: List<CampingSite>,
+        differenceCampingSiteResult: (List<CampingSite>, List<CampingSite>) -> Unit
+    ) {
+        // 원격 DB에 없는 로컬 캠핑장 정보
+        val localOnly = localCampingSites.filter { localSite ->
+            remoteCampingSites.none { remoteSite -> remoteSite.id == localSite.id }
+        }
+        // 로컬 DB에 없는 원격 캠핑장 정보
+        val remoteOnly = remoteCampingSites.filter { remoteSite ->
+            localCampingSites.none { localSite -> localSite.id == remoteSite.id }
+        }
+        differenceCampingSiteResult(localOnly, remoteOnly)
     }
 }
