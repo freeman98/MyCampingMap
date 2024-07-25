@@ -16,7 +16,7 @@
 - **Google Maps API**: 지도 통합 및 위치 서비스.
 
 **설치 및 설정**
-1. 저장소를 클론합니다: `git clone https://github.com/freeman98/TestComposeUI.git`
+1. 저장소를 클론합니다: `git clone https://github.com/freeman98/MyCampingMap.git`
 2. Android Studio에서 프로젝트를 엽니다.
 3. Firebase 설정을 추가하여 `google-services.json` 파일을 프로젝트에 추가합니다.
 4. 앱을 빌드하고 실행합니다.

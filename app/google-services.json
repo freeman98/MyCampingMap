@@ -7,17 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:287683711696:android:39d916f0c2bbe59c5e04d5",
+        "mobilesdk_app_id": "1:287683711696:android:dfb463e1af2ac93a5e04d5",
         "android_client_info": {
-          "package_name": "com.example.testcomposeui"
+          "package_name": "com.freeman.mycampingmap"
         }
       },
       "oauth_client": [
         {
-          "client_id": "287683711696-5m16kk9srnvkqjglpq2nm4scapa4rgmr.apps.googleusercontent.com",
+          "client_id": "287683711696-0ednnu8hrtjem4t16346uit1ggfaduur.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.testcomposeui",
+            "package_name": "com.freeman.mycampingmap",
             "certificate_hash": "571320ebecd0ee666bdb7c880ffcbdce23a827d6"
           }
         },

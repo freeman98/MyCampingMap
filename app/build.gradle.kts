@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.testcomposeui"
+    namespace = "com.freeman.mycampingmap"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.testcomposeui"
+        applicationId = "com.freeman.mycampingmap"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
