@@ -35,7 +35,6 @@ fun SplashScreen(
     viewModel: MainViewModel = viewModel()
 ) {
 //    Log.d("Splash", "SplashScreen() ")
-    val context = LocalContext.current
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.splash_animation))
     val lottieAnimatable = rememberLottieAnimatable()
     val user by viewModel.user.observeAsState()
@@ -46,7 +45,6 @@ fun SplashScreen(
 //            iterations = LottieConstants.IterateForever
             iterations = 1 // 1회만 반복
         )
-
     }
 
     val locationPermissionState = rememberPermissionState(
@@ -69,7 +67,6 @@ fun SplashScreen(
                     } else {
                         Log.d("Splash", "로그인 실패")
                     }
-
                 }
             }
         } else {
@@ -90,21 +87,27 @@ fun SplashScreen(
 
         if (user == null) {
             // 로그인 정보가 없는경우 로그인 버튼 노출
-            Button(
-                onClick = {
-                    //로그인 화면 이동.
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .offset(y = (-100).dp)
-            ) {
-                Text(text = "로그인")
-            }
+            LoginButton(
+                modifier = Modifier.offset(y = 150.dp),
+                navController
+            )
         }
 
+    }
+}
+
+@Composable
+fun LoginButton(modifier: Modifier = Modifier, navController: NavHostController) {
+    Button(
+        onClick = {
+            //로그인 화면 이동.
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
+        },
+        modifier = modifier
+    ) {
+        Text(text = "로그인")
     }
 }
 

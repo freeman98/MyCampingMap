@@ -9,18 +9,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
 import com.freeman.mycampingmap.compose.NavGraph
-import com.freeman.mycampingmap.ui.theme.TestComposeUITheme
+import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 
 class MainActivity : BaseActivity() {
 
-    val TAG = MainActivity::class.java.simpleName
+    val TAG = this::class.java.simpleName
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
         setContent {
-            TestComposeUITheme {
+            MyCampingMapUITheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     val navController = rememberNavController()
                     NavGraph(navController = navController)
@@ -35,7 +35,7 @@ class MainActivity : BaseActivity() {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    TestComposeUITheme {
+    MyCampingMapUITheme {
         val navController = rememberNavController()
         NavGraph(navController = navController)
     }

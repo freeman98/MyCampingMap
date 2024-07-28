@@ -20,5 +20,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "TestComposeUI"
+
 include(":app")
  

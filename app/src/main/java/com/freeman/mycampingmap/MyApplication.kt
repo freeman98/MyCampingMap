@@ -1,7 +1,6 @@
 package com.freeman.mycampingmap
 
 import android.app.Application
-import android.content.Context
 import com.google.android.libraries.places.api.Places
 import com.google.firebase.FirebaseApp
 

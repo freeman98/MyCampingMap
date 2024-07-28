@@ -1,6 +1,5 @@
 package com.freeman.mycampingmap.db
 
-import androidx.lifecycle.LiveData
 import kotlinx.coroutines.flow.Flow
 
 class UserRepository(private val userDao: UserDao) {

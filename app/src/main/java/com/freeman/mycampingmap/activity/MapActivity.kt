@@ -2,7 +2,6 @@ package com.freeman.mycampingmap.activity
 
 import android.content.ContentValues.TAG
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,13 +11,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.freeman.mycampingmap.compose.MapScreen
-import com.freeman.mycampingmap.ui.theme.TestComposeUITheme
+import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.BaseViewModel
 import com.freeman.mycampingmap.viewmodels.MapViewModel
 
-class MapActivity : ComponentActivity() {
+class MapActivity : BaseActivity() {
 
+    val TAG: String = this::class.java.simpleName
     private val viewModel by viewModels<MapViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,7 +26,7 @@ class MapActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            TestComposeUITheme {
+            MyCampingMapUITheme {
                 val viewModel: MapViewModel = viewModel(
                     factory = MapViewModelFactory()
                 )

@@ -12,9 +12,9 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.freeman.mycampingmap.R
 import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.MyApplication.Companion.context
+import com.freeman.mycampingmap.R
 import com.freeman.mycampingmap.auth.FirebaseManager.addFirebaseCampingSite
 import com.freeman.mycampingmap.auth.FirebaseManager.firebaseSaveUser
 import com.freeman.mycampingmap.data.CampingDataUtil.createCampingSiteData
@@ -37,6 +37,7 @@ import com.google.android.libraries.places.api.net.SearchNearbyRequest
 import kotlin.math.pow
 
 class MapViewModel : BaseViewModel() {
+
 
     val TAG: String = MapViewModel::class.java.simpleName
 

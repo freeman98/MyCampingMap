@@ -20,6 +20,7 @@ object FirebaseManager {
     private const val TAG = "FirebaseAuthManager"
 
     fun emailSignIn(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        // 파이어베이스 이메일 로그인
         MyLog.d(TAG, "emailSignIn() : email = $email, password = $password")
 
         FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
@@ -33,6 +34,7 @@ object FirebaseManager {
     }
 
     fun emailSignUp(email: String, password: String, onResult: (Boolean, String) -> Unit) {
+        // 파이어베이스 이메일 회원가입
         MyLog.d(TAG, "emailSignUp() : email = $email, password = $password")
 
         FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
@@ -55,8 +57,8 @@ object FirebaseManager {
     }
 
     fun firebaseAuthTokenLogin(
-        onResult: (Boolean, String?) -> Unit
-    ) {
+        onResult: (Boolean, String?) -> Unit) {
+        // 파이어베이스 인증 토큰 로그인
         MyLog.d(TAG, "firebaseAuthTokenLogin()")
         // 파이어베이스 인증
         FirebaseAuth.getInstance().currentUser?.getIdToken(true)
@@ -70,6 +72,7 @@ object FirebaseManager {
     }
 
     fun firebaseSaveUser(onComplet: (Boolean, User, String) -> Unit) {
+        // 파이어베이스 사용자 정보 저장
         MyLog.d(TAG, "firebaseSaveUser()")
 
         FirebaseAuth.getInstance().currentUser?.let { firebaseUser ->
@@ -99,8 +102,8 @@ object FirebaseManager {
 
     fun addFirebaseCampingSites(
         campingSites: List<CampingSite>,
-        onComplete: (Boolean) -> Unit
-    ) {
+        onComplete: (Boolean) -> Unit) {
+        //파이어스토어 데이터베이스에 캠핑장 리스트 일괄 저장.
         FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
             MyLog.d(TAG, "addFirebaseCampingSites() = $uid")
             val db = FirebaseFirestore.getInstance()
@@ -128,6 +131,7 @@ object FirebaseManager {
         //파이어스토어 데이터베이스에 저장.
         MyLog.d(TAG, "addFirebaseCampingSite() user = $user")
 
+        // 사용자 정보를 User 객체로 생성
         val campingSite = createCampingSiteData(place)
         MyLog.d(TAG, "addFirebaseCampingSite() = $campingSite")
 
@@ -189,39 +193,6 @@ object FirebaseManager {
                 }
         }
     }
-
-    //파이어스토어 데이터베이스에 저장된 캠핑장 정보 가져오기.
-//    fun getAllFierbaseCampingSites(
-//        onComplete: (Boolean, MutableList<CampingSite>) -> Unit
-//    ) {
-//        //파이어스토어 데이터베이스에 저장된 캠핑장 정보 가져오기.
-//        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
-//            MyLog.d(TAG, "getAllFierbaseCampingSites() = $uid")
-//
-//            val campingSites = mutableListOf<CampingSite>()
-//            val db = FirebaseFirestore.getInstance()
-//            db.collection("users").document(uid)
-//                .collection("my_camping_list")
-//                .get()
-//                .addOnSuccessListener { result ->
-//                    MyLog.d(TAG, "getAllFierbaseCampingSites().size = ${result.size()}")
-//
-//                    for (document in result) {
-//                        val campingSite = document.toObject(CampingSite::class.java)
-////                        MyLog.d(TAG, "getAllCampingSites() campingSite = $campingSite")
-//                        campingSites.add(campingSite)
-//                    }
-////                    _my_camping_list.value = campingSites
-//                    onComplete(true, campingSites)
-//                }
-//                .addOnFailureListener { e ->
-////                onComplete(emptyList())
-//                    Log.e(TAG, "Error getting documents: ", e)
-////                    _my_camping_list.value = emptyList()
-//                    onComplete(false, campingSites)
-//                }
-//        }
-//    }
 
     suspend fun getAllFirebaseCampingSites(): List<CampingSite> {
         return suspendCoroutine { continuation ->

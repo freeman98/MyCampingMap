@@ -28,14 +28,7 @@ import kotlinx.coroutines.launch
 //MVVM 모델 과 컴포스를 적용
 class MainViewModel : BaseViewModel() {
 
-    val TAG = MainViewModel::class.java.simpleName
-
-    private val userDao: UserDao = UserDatabase.getDatabase(MyApplication.context).userDao()
-    val user: LiveData<User?> = userDao.getUser().asLiveData()
-
-    // 내 캠핑장 리스트 정보
-    private val _syncAllCampingList = MutableLiveData<List<CampingSite>>()
-    val syncAllCampingList: LiveData<List<CampingSite>> = _syncAllCampingList
+    val TAG = this::class.java.simpleName
 
     //파이어베이스 캠핑장 리스트 정보
     private val _firebaseCampingSites = MutableLiveData<List<CampingSite>>()
@@ -44,14 +37,8 @@ class MainViewModel : BaseViewModel() {
     private val _dbAllCampingSites = MutableLiveData<List<CampingSite>>()
     val dbAllCampingSites: LiveData<List<CampingSite>> = _dbAllCampingSites
 
-//    fun getLoginUser(onComplete: (User?) -> Unit) {
-//        viewModelScope.launch {
-//            userDao.getUser().collect { user ->
-//                MyLog.d(TAG, "getLoginUser() = $user")
-//                onComplete(user)
-//            }
-//        }
-//    }
+    // 캠핑장 삭제 플레그 - 삭제중에 데이터 싱크가 일어나지 않게 하기 위해.
+    var isDeleting: Boolean = false
 
     fun loginTypeCheckUser(user: User, onComplete: (Boolean, String) -> Unit) {
         viewModelScope.launch {
@@ -71,44 +58,11 @@ class MainViewModel : BaseViewModel() {
 
                 LoginType.FACEBOOK -> { /* 페이스북 로그인 */
                 }
-            }
+            }   //when
 
-        }
+        }   //viewModelScope.launch
     }
 
-
-    fun emailLogin(
-        email: String,
-        password: String,
-        saveUserData: Boolean = false,
-        onComplete: (Boolean, String) -> Unit
-    ) {
-        // 파이어베이스 이메일 로그인.
-        MyLog.d(TAG, "emailLogin() = $email, $password")
-        val auth = FirebaseAuth.getInstance()
-        emailSignIn(email = email, password = password) { success, message ->
-            if (success) firebaseAuthTokenLogin { success, message ->
-                if (success) {
-                    auth.currentUser?.let { firebaseUser ->
-                        viewModelScope.launch {
-                            // 사용자 정보를 데이터베이스에 저장
-                            if (saveUserData) userDaoInsert(
-                                firebaseUser = firebaseUser,
-                                email = email,
-                                password = password
-                            )
-                            onComplete(true, "계정 생성에 성공 하였습니다.")
-                        }
-                    }
-                } else {
-                    onComplete(false, message ?: "로그인 실패")
-                }
-            } else {
-                onComplete(false, message ?: "로그인 실패")
-            }
-        }
-
-    }
 
     fun emailRegisterUser(email: String, password: String, onComplete: (Boolean, String) -> Unit) {
         // 파이어베이스 이메일 회원가입.
@@ -155,25 +109,9 @@ class MainViewModel : BaseViewModel() {
             }
     }
 
-//    fun getFirebaseCampingSite(): List<CampingSite> {
-//        //파이어베이스 캠핑장 정보 가져오기.
-//        val remoteSites = _firebaseCampingSites.value ?: emptyList()
-//        MyLog.d(TAG, "getFirebaseCampingSite() Size = ${remoteSites.size}")
-//        if (_firebaseCampingSites.value == null) {
-            //파이어스토어 데이터베이스에 저장된 캠핑장 정보 가져오기. - 최초에만.
-//            getAllFierbaseCampingSites { success, remoteSites ->
-//                if (success) {
-//                    _firebaseCampingSites.value = remoteSites
-//                } else {
-//                    Toast.makeText(MyApplication.context, "서버에서 캠핑장 목록 가져오기 실패", Toast.LENGTH_SHORT)
-//                        .show()
-//                }
-//            }
-//        }
-//    }
-
     fun syncCampingSites() {
-        if(isDeleting) return
+        //db데이터 또는 파이어베이스 사이트 정보 동기화.
+        if (isDeleting) return
         _isLoading.value = true
         MyLog.d(TAG, "syncCampingSites()")
         viewModelScope.launch {
@@ -196,8 +134,14 @@ class MainViewModel : BaseViewModel() {
         }
     }
 
-    // 캠핑장 삭제 플레그 - 삭제중에 데이터 싱크가 일어나지 않게 하기 위해.
-    private var isDeleting: Boolean = false
+    fun deleteCampingList(id: String) {
+        //db 캠핑장 정보 삭제.
+        _syncAllCampingList.value?.let { campingSites ->
+            val updatedList = campingSites.toMutableList()
+            updatedList.removeAll { it.id == id }
+            _syncAllCampingList.value = updatedList
+        }
+    }
 
     fun deleteCampingSite(campingSite: CampingSite) {
         isDeleting = true
@@ -214,15 +158,6 @@ class MainViewModel : BaseViewModel() {
                 }
                 isDeleting = false
             }
-        }
-    }
-
-    fun deleteCampingList(id: String) {
-        //db 캠핑장 정보 삭제.
-        _syncAllCampingList.value?.let { campingSites ->
-            val updatedList = campingSites.toMutableList()
-            updatedList.removeAll { it.id == id }
-            _syncAllCampingList.value = updatedList
         }
     }
 

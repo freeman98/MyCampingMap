@@ -58,9 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.freeman.mycampingmap.R
-import com.freeman.mycampingmap.auth.FirebaseManager.addFirebaseCampingSite
-import com.freeman.mycampingmap.auth.FirebaseManager.firebaseSaveUser
-import com.freeman.mycampingmap.ui.theme.TestComposeUITheme
+import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 import com.freeman.mycampingmap.utils.IntentUtil.Companion.callPhone
 import com.freeman.mycampingmap.utils.IntentUtil.Companion.openWebPage
 import com.freeman.mycampingmap.viewmodels.BaseViewModel
@@ -130,7 +128,7 @@ fun MyLocationButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun MyLocationButtonPreview() {
-    TestComposeUITheme {
+    MyCampingMapUITheme {
         MyLocationButton(onClick = {})
     }
 }
@@ -396,7 +394,7 @@ fun SerchListViewCard(
 @Preview
 @Composable
 fun SearchListViewPreview() {
-    TestComposeUITheme {
+    MyCampingMapUITheme {
         SearchListView(onBackPressed = {})
     }
 }
@@ -412,6 +410,8 @@ fun MapView(viewModel: MapViewModel = viewModel()) {
     val markerPlaceMap by viewModel.markerPlaceMap.observeAsState()
     // mainActivity 리스트에서 선택한 캠핑장
     val selectedCampingSite by viewModel.selectCampingSite.observeAsState()
+    //mainActivity 리스트에서 선택한 캠핑장
+    val syncAllCampingList by viewModel.syncAllCampingList.observeAsState(initial = emptyList())
 
     AndroidView(
         factory = { context ->
@@ -458,7 +458,7 @@ fun MapView(viewModel: MapViewModel = viewModel()) {
 @Preview(showBackground = true)
 @Composable
 fun MapScreenPreview() {
-    TestComposeUITheme {
+    MyCampingMapUITheme {
         MapScreen(viewModel()) {}
     }
 }
@@ -466,7 +466,7 @@ fun MapScreenPreview() {
 @Preview(showBackground = true)
 @Composable
 fun SearchBoxPreview() {
-    TestComposeUITheme {
+    MyCampingMapUITheme {
         SearchBox(onSearch = {}, onBackPressed = {})
     }
 }

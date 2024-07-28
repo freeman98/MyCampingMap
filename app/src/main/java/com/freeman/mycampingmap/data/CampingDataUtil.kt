@@ -1,6 +1,5 @@
 package com.freeman.mycampingmap.data
 
-import android.util.Log
 import android.widget.Toast
 import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.auth.FirebaseManager.addFirebaseCampingSites
@@ -15,7 +14,7 @@ import kotlinx.coroutines.withContext
 
 object CampingDataUtil {
 
-    val TAG = "CampingDataUtil"
+    val TAG: String = this::class.java.simpleName
 
     fun createCampingSiteData(place: Place): CampingSite {
         // 캠핑장 정보 객체 생성
@@ -45,19 +44,30 @@ object CampingDataUtil {
             MyLog.d(TAG, "syncCampingSites() localOnly.size: ${localOnly.size}")
             MyLog.d(TAG, "syncCampingSites() remoteOnly.size: ${remoteOnly.size}")
             coroutineScope.launch(Dispatchers.IO) {
-                withContext(Dispatchers.IO) {
-                    // 파이어베이스에만 있는 캠핑장 정보는 db에 저장.
-                    if(remoteOnly.size > 0 ) {
-                        MyLog.d(TAG, "syncCampingSites() campingSiteRepository.insertAll")
-                        campingSiteRepository.insertAll(remoteOnly)
-                    }
-                    // db에만 있는 캠핑장 정보는 파이어베이스에 저장.
-                    if(localOnly.size > 0) {
-                        addFirebaseCampingSites(localOnly) {MyLog.d(TAG, "syncCampingSites() addFirebaseCampingSites()")
-                            if (!it) Toast.makeText( MyApplication.context, "캠핑장 정보 저장 실패", Toast.LENGTH_SHORT).show()
-                        }
+                // 파이어베이스에만 있는 캠핑장 정보는 db에 저장.
+                if(remoteOnly.size > 0 ) {
+                    MyLog.d(TAG, "syncCampingSites() campingSiteRepository.insertAll")
+                    campingSiteRepository.insertAll(remoteOnly)
+                }
+                // db에만 있는 캠핑장 정보는 파이어베이스에 저장.
+                if(localOnly.size > 0) {
+                    addFirebaseCampingSites(localOnly) {MyLog.d(TAG, "syncCampingSites() addFirebaseCampingSites()")
+                        if (!it) Toast.makeText( MyApplication.context, "캠핑장 정보 저장 실패", Toast.LENGTH_SHORT).show()
                     }
                 }
+//                withContext(Dispatchers.IO) {
+//                    // 파이어베이스에만 있는 캠핑장 정보는 db에 저장.
+//                    if(remoteOnly.size > 0 ) {
+//                        MyLog.d(TAG, "syncCampingSites() campingSiteRepository.insertAll")
+//                        campingSiteRepository.insertAll(remoteOnly)
+//                    }
+//                    // db에만 있는 캠핑장 정보는 파이어베이스에 저장.
+//                    if(localOnly.size > 0) {
+//                        addFirebaseCampingSites(localOnly) {MyLog.d(TAG, "syncCampingSites() addFirebaseCampingSites()")
+//                            if (!it) Toast.makeText( MyApplication.context, "캠핑장 정보 저장 실패", Toast.LENGTH_SHORT).show()
+//                        }
+//                    }
+//                }
             }
         }
 //        onSyncComplete(mergedSites)

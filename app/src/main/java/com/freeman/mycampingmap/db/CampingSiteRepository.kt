@@ -1,6 +1,5 @@
 package com.freeman.mycampingmap.db
 
-import androidx.lifecycle.LiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

@@ -57,7 +57,7 @@ import com.bumptech.glide.request.transition.Transition
 import com.freeman.mycampingmap.R
 import com.freeman.mycampingmap.activity.MapActivity
 import com.freeman.mycampingmap.db.CampingSite
-import com.freeman.mycampingmap.ui.theme.TestComposeUITheme
+import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 import com.freeman.mycampingmap.viewmodels.MainViewModel
 
 @Composable
@@ -136,19 +136,7 @@ fun CampDataListView(
     Log.d(viewModel.TAG, "CampDataListView()")
     val context = LocalContext.current
     val syncAllCampingList by viewModel.syncAllCampingList.observeAsState(initial = emptyList())
-    val dbAllCampingSites by viewModel.dbAllCampingSites.observeAsState(initial = emptyList())
-    val firebaseCampingSites by viewModel.firebaseCampingSites.observeAsState(initial = emptyList())
     val isLoading by viewModel.isLoading.observeAsState(false)
-
-//    LaunchedEffect(Unit) {
-//        //파이어베이스 사이트 정보가 변경될때 만 호출.
-//        viewModel.getFirebaseCampingSite()
-//    }
-//
-//    LaunchedEffect(dbAllCampingSites, firebaseCampingSites) {
-//        //db데이터 또는 파이어베이스 사이트 정보가 변경될때 만 호출.
-//        viewModel.syncCampingSites()
-//    }
 
     LaunchedEffect(Unit) {
         //db데이터 또는 파이어베이스 사이트 정보가 변경될때 만 호출.
@@ -185,7 +173,7 @@ fun CampDataListView(
 @Preview(showBackground = true)
 @Composable
 fun CampDataViewCardPreview() {
-    TestComposeUITheme {
+    MyCampingMapUITheme {
         CampDataViewCard(capingSite = CampingSite(), onCardClick = {}, onCardDeleteClick = {})
     }
 }
@@ -295,7 +283,7 @@ fun ProfileImg(imgUrl: String?, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
-    TestComposeUITheme {
+    MyCampingMapUITheme {
         MainScreen()
     }
 }
