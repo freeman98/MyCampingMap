@@ -62,7 +62,9 @@ fun SignupScreen(
             // 로딩이 아닐 때
             // 회원가입 버튼
             SignupButton(email = email, password = password,
-                confirmPassword = confirmPassword, isLoading = { isLoading = it })
+                confirmPassword = confirmPassword,
+                navController = navController,
+                isLoading = { isLoading = it })
             Spacer(modifier = Modifier.height(8.dp))
             // 로그인 화면으로 이동
             SignupGotoLginScreenTextButton(navController = navController)
@@ -85,7 +87,7 @@ fun SignupGotoLginScreenTextButton(navController: NavHostController) {
 @Composable
 fun SignupButton(
     email: String, password: String, confirmPassword: String, isLoading: (Boolean) -> Unit,
-    navController: NavHostController = NavHostController(LocalContext.current),
+    navController: NavHostController,
     viewModel: MainViewModel = viewModel()
 ) {
     // 회원가입 버튼

@@ -1,6 +1,7 @@
 package com.freeman.mycampingmap.viewmodels
 
 import android.location.Location
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -12,6 +13,7 @@ import com.freeman.mycampingmap.auth.FirebaseManager.firebaseAuthTokenLogin
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.db.CampingSiteDatabase
 import com.freeman.mycampingmap.db.CampingSiteRepository
+import com.freeman.mycampingmap.db.LoginType
 import com.freeman.mycampingmap.db.User
 import com.freeman.mycampingmap.db.UserDao
 import com.freeman.mycampingmap.db.UserDatabase
@@ -19,6 +21,8 @@ import com.freeman.mycampingmap.db.UserFactory.createUser
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.BaseViewModel.LiveDataBus._selectCampingSite
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -138,7 +142,7 @@ open class BaseViewModel : ViewModel() {
                             if (saveUserData) createUser(
                                 this,
                                 userDao = userDao,
-                                firebaseUser = firebaseUser,
+                                uid = firebaseUser.uid,
                                 email = email,
                                 password = password
                             )

@@ -1,17 +1,33 @@
 package com.freeman.mycampingmap.auth
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.result.ActivityResult
+import androidx.lifecycle.viewModelScope
 import com.freeman.mycampingmap.MyApplication
+import com.freeman.mycampingmap.R
 import com.freeman.mycampingmap.data.CampingDataUtil.createCampingSiteData
 import com.freeman.mycampingmap.db.CampingSite
+import com.freeman.mycampingmap.db.LoginType
 import com.freeman.mycampingmap.db.User
+import com.freeman.mycampingmap.db.UserDao
+import com.freeman.mycampingmap.db.UserFactory.createUser
 import com.freeman.mycampingmap.utils.MyLog
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.libraries.places.api.model.Place
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -57,7 +73,8 @@ object FirebaseManager {
     }
 
     fun firebaseAuthTokenLogin(
-        onResult: (Boolean, String?) -> Unit) {
+        onResult: (Boolean, String?) -> Unit
+    ) {
         // 파이어베이스 인증 토큰 로그인
         MyLog.d(TAG, "firebaseAuthTokenLogin()")
         // 파이어베이스 인증
@@ -102,7 +119,8 @@ object FirebaseManager {
 
     fun addFirebaseCampingSites(
         campingSites: List<CampingSite>,
-        onComplete: (Boolean) -> Unit) {
+        onComplete: (Boolean) -> Unit
+    ) {
         //파이어스토어 데이터베이스에 캠핑장 리스트 일괄 저장.
         FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
             MyLog.d(TAG, "addFirebaseCampingSites() = $uid")
@@ -218,6 +236,60 @@ object FirebaseManager {
                 continuation.resume(emptyList())
             }
         }
+    }
+
+    fun firebaseAuthWithGoogle(
+        idToken: String,
+        saveUserData: Boolean = false,
+        userDao: UserDao,
+        coroutineScope: CoroutineScope,
+        onComplete: (Boolean, String) -> Unit
+    ) {
+        // 파이어베이스 구글 메일 인증
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        FirebaseAuth.getInstance().signInWithCredential(credential)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    MyLog.d( "signInWithCredential:success saveUserData = $saveUserData")
+                    // 성공 처리
+                    val uid = task.result?.user?.uid
+                    val email = task.result?.user?.email
+                    val displayName = task.result?.user?.displayName
+
+                    if (saveUserData) {
+                        MyLog.d( "task.result?.user = ${task.result?.user?.uid}")
+                        val u = createUser(
+                            coroutinScope = coroutineScope,
+                            userDao = userDao,
+                            uid = uid ?: "",
+                            email = email ?: "",
+                            username = displayName ?: "",
+                            idToken = idToken,
+                            loginType = LoginType.GOOGLE
+                        )
+                        MyLog.d("firebaseAuthWithGoogle() createUser = $u")
+                    }
+                    onComplete(true, "")
+                } else {
+                    // 실패 처리
+                    Log.w("signInWithCredential:failure", task.exception)
+                    onComplete(false, "")
+                }
+            }
+    }
+
+    fun loginGoogleInit(
+        context: Context,
+        launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
+    ) {
+        val googleSignInOptions = GoogleSignInOptions
+            .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.resources.getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+
+        val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
+        launcher.launch(googleSignInClient.signInIntent)
     }
 
 

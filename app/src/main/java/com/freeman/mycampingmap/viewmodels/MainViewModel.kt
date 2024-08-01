@@ -4,26 +4,27 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.auth.FirebaseManager.deleteFirebaseCampingSite
-import com.freeman.mycampingmap.auth.FirebaseManager.emailSignIn
 import com.freeman.mycampingmap.auth.FirebaseManager.emailSignUp
 import com.freeman.mycampingmap.auth.FirebaseManager.firebaseAuthTokenLogin
+import com.freeman.mycampingmap.auth.FirebaseManager.firebaseAuthWithGoogle
 import com.freeman.mycampingmap.auth.FirebaseManager.getAllFirebaseCampingSites
 import com.freeman.mycampingmap.data.CampingDataUtil
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.db.LoginType
 import com.freeman.mycampingmap.db.User
 import com.freeman.mycampingmap.db.UserDao
-import com.freeman.mycampingmap.db.UserDatabase
+import com.freeman.mycampingmap.db.UserFactory.createUser
 import com.freeman.mycampingmap.utils.MyLog
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 //MVVM 모델 과 컴포스를 적용
 class MainViewModel : BaseViewModel() {
@@ -41,6 +42,8 @@ class MainViewModel : BaseViewModel() {
     var isDeleting: Boolean = false
 
     fun loginTypeCheckUser(user: User, onComplete: (Boolean, String) -> Unit) {
+        MyLog.d(TAG, "loginTypeCheckUser() = $user")
+
         viewModelScope.launch {
             //db에 저장된 사용자 정보를 이용하여 로그인 신청.
             MyLog.d(TAG, "checkUser() = $user")
@@ -54,6 +57,16 @@ class MainViewModel : BaseViewModel() {
                 }
 
                 LoginType.GOOGLE -> { /* 구글 로그인 */
+
+                    firebaseAuthWithGoogle(
+                        idToken = user.idToken,
+                        userDao = userDao,
+                        coroutineScope = this
+                    ) { success, message ->
+                        MyLog.d(TAG, "loginGoogle() firebaseAuthWithGoogle : $success")
+                        if (success) onComplete(true, "")
+                    }
+
                 }
 
                 LoginType.FACEBOOK -> { /* 페이스북 로그인 */
@@ -62,7 +75,6 @@ class MainViewModel : BaseViewModel() {
 
         }   //viewModelScope.launch
     }
-
 
     fun emailRegisterUser(email: String, password: String, onComplete: (Boolean, String) -> Unit) {
         // 파이어베이스 이메일 회원가입.
@@ -83,54 +95,42 @@ class MainViewModel : BaseViewModel() {
         }
     }
 
-    suspend fun userDaoInsert(firebaseUser: FirebaseUser, email: String, password: String) {
-        // 사용자 정보를 데이터베이스에 저장
-        val newUser = User(
-            uid = firebaseUser.uid,
-            email = email,
-            password = password,
-            username = firebaseUser.displayName ?: ""
-        )
-        userDao.insertUser(newUser)
-    }
-
-    fun firebaseAuthWithGoogle(idToken: String, onComplete: (Boolean, String) -> Unit) {
-        // 파이어베이스 구글 메일 인증
-        val credential = GoogleAuthProvider.getCredential(idToken, null)
-        FirebaseAuth.getInstance().signInWithCredential(credential)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    // 성공 처리
-                    MyLog.d(TAG, "signInWithCredential:success")
-                } else {
-                    // 실패 처리
-                    Log.w(TAG, "signInWithCredential:failure", task.exception)
-                }
-            }
-    }
+//    suspend fun userDaoInsert(firebaseUser: FirebaseUser, email: String, password: String) {
+//        // 사용자 정보를 데이터베이스에 저장
+//        val newUser = User(
+//            uid = firebaseUser.uid,
+//            email = email,
+//            password = password,
+//            username = firebaseUser.displayName ?: ""
+//        )
+//        userDao.insertUser(newUser)
+//    }
 
     fun syncCampingSites() {
         //db데이터 또는 파이어베이스 사이트 정보 동기화.
         if (isDeleting) return
         _isLoading.value = true
         MyLog.d(TAG, "syncCampingSites()")
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val dbAllCampingSiteSelect = async { dbAllCampingSiteSelect() }
             val fierbaseCampingSites = async { getAllFirebaseCampingSites() }
             val localSites = dbAllCampingSiteSelect.await()
             val remoteSites = fierbaseCampingSites.await()
             MyLog.d(TAG, "syncCampingSites() localSites.size : ${localSites.size}")
             MyLog.d(TAG, "syncCampingSites() remoteSites.size : ${remoteSites.size}")
-            _syncAllCampingList.value = localSites + remoteSites
+            withContext(Dispatchers.Main) {
+                _syncAllCampingList.value = localSites + remoteSites
+            }
 
             val syncCampingSites = CampingDataUtil.syncCampingSites(
                 localSites, remoteSites,
                 campingSiteRepository, this
             )
-            MyLog.d(TAG, "syncCampingSites() syncCampingSites.size : ${syncCampingSites.size}")
-            _syncAllCampingList.value = syncCampingSites
-
-            _isLoading.value = false
+            withContext(Dispatchers.Main) {
+                MyLog.d(TAG, "syncCampingSites() syncCampingSites.size : ${syncCampingSites.size}")
+                _syncAllCampingList.value = syncCampingSites
+                _isLoading.value = false
+            }
         }
     }
 
