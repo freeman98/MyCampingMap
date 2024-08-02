@@ -4,8 +4,6 @@ import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.MyApplication.Companion.context
@@ -70,7 +68,6 @@ class MainViewModel : BaseViewModel() {
                             onComplete(false, "")
                         }
                     }
-
                 }
 
                 LoginType.FACEBOOK -> { /* 페이스북 로그인 */
@@ -97,6 +94,22 @@ class MainViewModel : BaseViewModel() {
                 onComplete(success, message)
             }
         }
+    }
+
+    fun getDBCampingSites() {
+        //db데이터 사이트 정보 가져오기.
+        MyLog.d(TAG, "getDBCampingSites()")
+        if (isDeleting) return
+        _isLoading.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            val dbAllCampingSiteSelect = async { dbAllCampingSiteSelect() }
+            val localSites = dbAllCampingSiteSelect.await()
+            MyLog.d(TAG, "getDBCampingSites() localSites.size : ${localSites.size}")
+            withContext(Dispatchers.Main) {
+                _syncAllCampingList.value = localSites
+            }
+        }
+        _isLoading.value = false
     }
 
     fun syncCampingSites() {
@@ -145,9 +158,9 @@ class MainViewModel : BaseViewModel() {
             deleteFirebaseCampingSite(campingSite) { success ->
                 if (success) {
                     deleteCampingList(campingSite.id)
-                    Toast.makeText(MyApplication.context, "삭제 성공", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "삭제 성공", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(MyApplication.context, "삭제 실패", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "삭제 실패", Toast.LENGTH_SHORT).show()
                 }
                 isDeleting = false
             }

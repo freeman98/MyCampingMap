@@ -8,9 +8,12 @@ import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.widget.Space
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,15 +29,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Divider
+import androidx.compose.material.FabPosition
 import androidx.compose.material.Scaffold
+import androidx.compose.material.ScaffoldState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Menu
@@ -45,6 +50,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -91,6 +97,7 @@ import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.MainViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
@@ -98,6 +105,7 @@ fun MainScreen(
     navController: NavHostController,
     viewModel: MainViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
 
@@ -105,8 +113,10 @@ fun MainScreen(
     // dp 값으로 변환 - 드로어 상단 패딩
     val topPadding = with(LocalDensity.current) { systemInsets.getTop(this).toDp() }
 
-    //뒤로가기 버튼 눌렀을때
-    MainScreenBackHandler()
+    //뒤로가기 버튼 이벤트 헨들러.
+    MainScreenBackHandler(scaffoldState)
+    //지도 액티비티 Result 런처
+    val launcher = mapRememberLauncherForActivityResult()
 
     Scaffold(
         //상단바
@@ -139,6 +149,16 @@ fun MainScreen(
         scaffoldState = scaffoldState,          //스캐폴드 상태
         drawerShape = customDrawerShape(topPadding),      //드로어 모양
         drawerElevation = 30.dp,                //드로어 그림자
+        floatingActionButton = {
+            FloatingActionButton(onClick = {
+                MyLog.d("MainScreen() FloatingActionButton()")
+                gotoMapActivity(context, launcher)
+            }) {
+                Icon(imageVector = Icons.Filled.Add, contentDescription = "더하기", tint = Color.White)
+            }
+        },  //버튼
+        floatingActionButtonPosition = FabPosition.End, //버튼 위치
+        isFloatingActionButtonDocked = false,    //버튼 위치 조정
     ) { paddingValues ->
         // 메인 컨텐츠 영역에 paddingValues를 적용하여 content 컴포저블 호출
         Box(
@@ -147,13 +167,30 @@ fun MainScreen(
                 .padding(paddingValues),
             contentAlignment = Alignment.Center
         ) {
+            //캠핑장 리스트
             CampDataListView()
         }
     }
 }
 
 @Composable
+fun mapRememberLauncherForActivityResult(viewModel: MainViewModel = viewModel()
+): ManagedActivityResultLauncher<Intent, ActivityResult> {
+    return rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            MyLog.d("onActivityResult() RESULT_OK")
+            // 액티비티에서 돌아온 결과를 처리하는 코드
+            viewModel.getDBCampingSites()
+        }
+    }
+}
+
+@Composable
 fun MainScreenBackHandler(
+    scaffoldState: ScaffoldState = rememberScaffoldState(),
+    scope: CoroutineScope = rememberCoroutineScope(),
     activity: Activity = LocalContext.current as Activity,
 ) {
     var backPressedOnce by remember { mutableStateOf(false) }
@@ -163,6 +200,14 @@ fun MainScreenBackHandler(
     BackHandler {
         //메인 화면에서 뒤로가기 버튼 눌렀을때
         MyLog.d("MainScreen() BackHandler()")
+        if (scaffoldState.drawerState.isOpen) {
+            //드로어가 열려있으면 닫기.
+            scope.launch {
+                scaffoldState.drawerState.close()
+            }
+            return@BackHandler
+        }
+
         if (backPressedOnce) {
             // 두 번째 뒤로가기 눌렀을 때 - 앱종료
             activity.finishAffinity()
@@ -211,9 +256,11 @@ fun DrawerSideContent(
     val paddingMdifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
     val scrollState = rememberScrollState()
 
-    Column(modifier = Modifier
-        .verticalScroll(scrollState)
-        .then(modifier)) {
+    Column(
+        modifier = Modifier
+            .verticalScroll(scrollState)
+            .then(modifier)
+    ) {
         Row(modifier = paddingMdifier, verticalAlignment = Alignment.CenterVertically) {
             Text(
                 modifier = Modifier.weight(1f),
@@ -272,7 +319,7 @@ fun DrawerSideMenuLogout(navController: NavHostController, viewModel: MainViewMo
     if (showDialog) {
         LogoutDialog(
             onDismiss = { showDialog = false },
-            onConfirm = {onConfirm ->
+            onConfirm = { onConfirm ->
                 MyLog.d("MainScreen", "SideMenuLogout() logout()")
                 showDialog = false
                 if (onConfirm) {
@@ -325,6 +372,7 @@ fun CustomTopAppBar(
     onNavigationIconClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
+
     TopAppBar(
         title = { Text(text = title) },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -353,17 +401,22 @@ fun CustomTopAppBar(
                 )
             }
         }
-    )
+
+        )   //TopAppBar
 }
 
-fun gotoMapActivity(context: Context) {
+fun gotoMapActivity(
+    context: Context,
+    launcher: ManagedActivityResultLauncher<Intent, ActivityResult>? = null
+) {
     val intent = Intent(context, MapActivity::class.java)
-    context.startActivity(intent)
+    launcher?.launch(intent) ?: context.startActivity(intent)
 }
 
 @Composable
 fun CampDataListView(
-    modifier: Modifier = Modifier, viewModel: MainViewModel = viewModel()
+    modifier: Modifier = Modifier,
+    viewModel: MainViewModel = viewModel()
 ) {
     Log.d(viewModel.TAG, "CampDataListView()")
     val context = LocalContext.current
@@ -377,7 +430,12 @@ fun CampDataListView(
 
     Log.d(viewModel.TAG, "CampDataListView() syncAllCampingList.size = ${syncAllCampingList.size}")
     //메모리 관리가 들어간 LazyColumn
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(modifier),
+        contentAlignment = Alignment.Center
+    ) {
         if (isLoading) {
             CircularProgressIndicator()
         } else {

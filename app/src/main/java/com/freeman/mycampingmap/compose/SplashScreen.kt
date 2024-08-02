@@ -51,7 +51,7 @@ fun SplashScreen(
         // 위치 권한
         permission = Manifest.permission.ACCESS_FINE_LOCATION
     )
-    val launcher = GoogleRememberLauncherForActivityResult(navController)
+    val launcher = googleRememberLauncherForActivityResult(navController)
 //    Log.d("Splash", "user : $user")
     LaunchedEffect(user) {
         if (locationPermissionState.status.isGranted) {

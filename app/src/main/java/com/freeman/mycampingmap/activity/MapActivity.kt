@@ -1,8 +1,7 @@
 package com.freeman.mycampingmap.activity
 
-import android.content.ContentValues.TAG
+import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -33,6 +32,8 @@ class MapActivity : BaseActivity() {
                 MapScreen(viewModel) {
                     //앱 종료
                     MyLog.d(TAG, "MapActivity onBackPressed()")
+                    val intent = Intent()
+                    setResult(RESULT_OK, intent)
                     finish()
                 }
             }

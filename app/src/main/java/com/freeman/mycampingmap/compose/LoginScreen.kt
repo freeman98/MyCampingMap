@@ -1,7 +1,6 @@
 package com.freeman.mycampingmap.compose
 
 import android.app.Activity
-import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -56,8 +55,6 @@ import com.freeman.mycampingmap.auth.FirebaseManager.firebaseLoginGoogleInit
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.utils.validateAndLoginCheck
 import com.freeman.mycampingmap.viewmodels.LoginViewModel
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.common.api.ApiException
 
 @Composable
 fun LoginScreen(
@@ -110,7 +107,7 @@ fun SNSLoginContent(
     val context = LocalContext.current
     Row(modifier = modifier) {
         //구글 로그인
-        val launcher = GoogleRememberLauncherForActivityResult(navController)
+        val launcher = googleRememberLauncherForActivityResult(navController)
         SNSLoginIconButton(
             resId = R.drawable.ibtn_light_rd_google,
             onClick = {
@@ -130,7 +127,7 @@ fun SNSLoginContent(
 }
 
 @Composable
-fun GoogleRememberLauncherForActivityResult(
+fun googleRememberLauncherForActivityResult(
     navController: NavHostController,
     viewModel: LoginViewModel = viewModel(),
 ): ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult> {
