@@ -24,13 +24,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Scaffold
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -169,15 +170,21 @@ fun customDrawerShape(topPadding: Dp) = object : Shape {
 @Composable
 fun DrawerSideContent(navController: NavHostController) {
     // DrawerContent 사이드 메뉴
-    Text(text = "drawer 1")
-    Text(text = "drawer 2")
-    Text(text = "drawer 3")
-    Text(text = "drawer 4")
+    Column() {
+        Text(text = "MENU 1")
+        Text(text = "MENU 2")
+        Text(text = "MENU 3")
+        Text(text = "MENU 4")
 
-    //로그아웃
-    SideMenuLogout(navController)
+        //로그아웃
+        SideMenuLogout(navController)
+    }
+}
 
-
+@Preview
+@Composable
+fun DrawerSideContentPreview() {
+    DrawerSideContent(navController = NavHostController(LocalContext.current))
 }
 
 @Composable
@@ -313,23 +320,19 @@ fun CampDataViewCard(
         Row(
             /*
             - horizontalArrangement Arrangement = 요소를 어떤식으로 배열할지 설정, Start, End, Center 만 존재.
-            -
              */
             modifier = Modifier.padding(10.dp), //패징값.
             verticalAlignment = Alignment.Bottom, //세로 정렬 설정.
             horizontalArrangement = Arrangement.spacedBy(10.dp) //가로 간격 설정.
 //            horizontalArrangement = Arrangement.End
         ) {
-//            Box(
-//                modifier =
-//                Modifier
-//                    .size(width = 60.dp, height = 60.dp)
-//                    .clip(CircleShape)
-//                    .background(MyBlue)
-//            )
-            ProfileImg("https://randomuser.me/api/portraits/women/11.jpg")
-
-            Column {
+            ProfileImg(
+                modifier = Modifier.align(Alignment.Top),
+                imgUrl = "https://randomuser.me/api/portraits/women/11.jpg"
+            )
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = capingSite.name,
                     style = typography.titleLarge
@@ -338,28 +341,95 @@ fun CampDataViewCard(
                     text = capingSite.address,
                     style = typography.titleMedium
                 )
-                Button(onClick = {
-                    // 삭제 버튼 클릭 시 처리
-//                    Log.d(viewModel.TAG, "CampDataViewCard() onClick() Delete ID = ${capingSite.id}")
-                    onCardDeleteClick(capingSite)
-                }) {
-                    Text(text = "삭제")
-                }
             }
+            CardDeleteImageButton(
+                capingSite,
+                modifier = Modifier.align(Alignment.Top),
+                onClick = { onCardDeleteClick(capingSite) }
+            )
         }
     }
 }
 
 @Composable
-fun ProfileImg(imgUrl: String?, modifier: Modifier = Modifier) {
+fun CardDeleteImageButton(
+    campingSite: CampingSite,
+    modifier: Modifier = Modifier,
+    onClick: (CampingSite) -> Unit,
+    viewModel: MainViewModel = viewModel()
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    // 카드 삭제 버튼
+    IconButton(
+        modifier = modifier,
+        onClick = {
+//            onClick(capingSite)
+            showDialog = true
+        }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = "Delete"
+        )
+    }
+
+    if (showDialog) {
+        // 삭제 확인 다이얼로그
+        CardDeleteAlartDialog(
+            onDismiss = { showDialog = false }
+        ) { delete ->
+            if (delete) {
+                onClick(campingSite)
+            }
+            showDialog = false
+        }
+    }
+}
+
+@Composable
+fun CardDeleteAlartDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (Boolean) -> Unit
+) {
+    //삭제 확인 다이얼로그
+    AlertDialog(
+        onDismissRequest = onDismiss,   //다이얼로그 밖 클릭시 닫힘.
+        title = { Text("삭제 확인") },
+        text = { Text("이 캠핑장을 삭제하시겠습니까?") },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(true) }
+            ) {
+                Text("삭제")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = { onConfirm(false) }
+            ) {
+                Text("취소")
+            }
+        }
+    )
+}
+
+@Preview
+@Composable
+fun CardDeleteAlartDialogPreview() {
+    CardDeleteAlartDialog(onDismiss = {}, onConfirm = {})
+}
+
+@Composable
+fun ProfileImg(modifier: Modifier = Modifier, imgUrl: String?) {
     // 이미지 비트맵
     val bitmap: MutableState<Bitmap?> = remember { mutableStateOf(null) }
 
     //이미지 모디파이어
     val imageModifier = modifier
         .size(50.dp, 50.dp)
-//        .clip(RoundedCornerShape(10.dp)) //이미지 모서리 라운드
-        .clip(CircleShape)  //이미지 원형
+        .clip(RoundedCornerShape(10.dp)) //이미지 모서리 라운드
+//        .clip(CircleShape)  //이미지 원형
 
 
     //이미지 관리 라이브러리.
@@ -367,7 +437,10 @@ fun ProfileImg(imgUrl: String?, modifier: Modifier = Modifier) {
         .asBitmap()
         .load(imgUrl)
         .into(object : CustomTarget<Bitmap>() {
-            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+            override fun onResourceReady(
+                resource: Bitmap,
+                transition: Transition<in Bitmap>?
+            ) {
                 //bitmap 생성됬을때 호출.
                 bitmap.value = resource
             }
