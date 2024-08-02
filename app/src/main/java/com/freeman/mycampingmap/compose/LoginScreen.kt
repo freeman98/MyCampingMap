@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -50,10 +51,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.R
-import com.freeman.mycampingmap.auth.FirebaseManager.loginGoogleInit
+import com.freeman.mycampingmap.auth.FirebaseManager.firebaseLoginGoogleInit
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.utils.validateAndLoginCheck
 import com.freeman.mycampingmap.viewmodels.LoginViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
 
 @Composable
 fun LoginScreen(
@@ -110,8 +113,8 @@ fun SNSLoginContent(
         SNSLoginIconButton(
             resId = R.drawable.ibtn_light_rd_google,
             onClick = {
-                //구글 로그인
-                loginGoogleInit(context, launcher)
+                //구글 로그인 초기화
+                firebaseLoginGoogleInit(context, launcher)
             }
         )
 
@@ -129,25 +132,33 @@ fun SNSLoginContent(
 fun GoogleRememberLauncherForActivityResult(
     navController: NavHostController,
     viewModel: LoginViewModel = viewModel(),
-): ManagedActivityResultLauncher<Intent, ActivityResult> {
+): ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult> {
     //구글 로그인
     val coroutionScope = viewModel.viewModelScope
+    val context = LocalContext.current
     return rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
+        contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { activityResult ->
         MyLog.d("LoginScreen", "activityResult.resultCode : ${activityResult.resultCode}")
-        if(activityResult.resultCode == Activity.RESULT_OK ) {
-            viewModel.loginGoogle(activityResult = activityResult,coroutionScope = coroutionScope, saveUserData = true) { success, message ->
+        if (activityResult.resultCode == Activity.RESULT_OK) {
+
+            viewModel.loginGoogle(
+                activityResult = activityResult,
+                coroutionScope = coroutionScope,
+                saveUserData = true
+            ) { success, message ->
                 if (success) {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 }
             }
+        }else{
+            //구글 로그인 실패 하면 앱종료
+            (context as? Activity)?.finishAffinity()
         }
     }
 }
-
 
 @Composable
 fun SNSLoginIconButton(resId: Int, onClick: () -> Unit) {

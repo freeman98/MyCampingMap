@@ -153,7 +153,7 @@ class MapViewModel : BaseViewModel() {
             MyLog.d(TAG, "setOnMapClickListener() latLng = $latLng")
             //placesClient을 이용하여 클릭한 지도 근방의 지도 정보를 가져온다.
             searchNearbyPlaces(latLng) { places ->
-//                MyLog.d(TAG, "searchNearbyPlaces() = $it")
+//                MyMyLog.d(TAG, "searchNearbyPlaces() = $it")
                 removeAllMarkers()
                 addMapMarkers(places)
             }
@@ -164,7 +164,7 @@ class MapViewModel : BaseViewModel() {
             MyLog.d(TAG, "OnInfoWindowClickListener() $place")
         }
 
-//        MyLog.d(TAG, "_selectCampingSite.value = ${_selectCampingSite.value}")
+//        MyMyLog.d(TAG, "_selectCampingSite.value = ${_selectCampingSite.value}")
         // 메인화면에서 선택한 캠핑 사이트가 있으면 내위치 초기화를 하지 않는다.
         if (_selectCampingSite.value != null) return
 
@@ -211,7 +211,7 @@ class MapViewModel : BaseViewModel() {
             val title = marker.title
             val snippet = marker.snippet
             val place = marker.tag as? Place
-            Log.d("", "render() place.rating = ${place?.rating}")
+            MyLog.d("", "render() place.rating = ${place?.rating}")
 
             val titleUi = view.findViewById<TextView>(R.id.title)
             titleUi.text = place?.rating?.let { "$title  ${it}/5.0" } ?: title
@@ -241,7 +241,7 @@ class MapViewModel : BaseViewModel() {
 
     private fun myCurrentLocation(onResult: (Boolean, String, String) -> Unit) {
         MyLocation.requestLocation { isSuccess, latitude, longitude ->
-            Log.d(
+            MyLog.d(
                 TAG,
                 "myCurrentLocation() isSuccess = $isSuccess, latitude=$latitude, longitude=$longitude"
             )

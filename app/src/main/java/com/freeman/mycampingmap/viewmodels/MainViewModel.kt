@@ -1,30 +1,31 @@
 package com.freeman.mycampingmap.viewmodels
 
-import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.freeman.mycampingmap.MyApplication
+import com.freeman.mycampingmap.MyApplication.Companion.context
 import com.freeman.mycampingmap.auth.FirebaseManager.deleteFirebaseCampingSite
 import com.freeman.mycampingmap.auth.FirebaseManager.emailSignUp
 import com.freeman.mycampingmap.auth.FirebaseManager.firebaseAuthTokenLogin
-import com.freeman.mycampingmap.auth.FirebaseManager.firebaseAuthWithGoogle
+import com.freeman.mycampingmap.auth.FirebaseManager.firebaseLoginGoogleInit
 import com.freeman.mycampingmap.auth.FirebaseManager.getAllFirebaseCampingSites
 import com.freeman.mycampingmap.data.CampingDataUtil
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.db.LoginType
 import com.freeman.mycampingmap.db.User
-import com.freeman.mycampingmap.db.UserDao
-import com.freeman.mycampingmap.db.UserFactory.createUser
 import com.freeman.mycampingmap.utils.MyLog
+import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
 
 //MVVM 모델 과 컴포스를 적용
 class MainViewModel : BaseViewModel() {
@@ -40,8 +41,12 @@ class MainViewModel : BaseViewModel() {
 
     // 캠핑장 삭제 플레그 - 삭제중에 데이터 싱크가 일어나지 않게 하기 위해.
     var isDeleting: Boolean = false
+    // 이전에 로그인 한 계정이 있는지 확인
+    private fun getLastSignedInAccount() = GoogleSignIn.getLastSignedInAccount(context)
 
-    fun loginTypeCheckUser(user: User, onComplete: (Boolean, String) -> Unit) {
+    fun loginTypeCheckUser(user: User,
+                           launcher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>,
+                           onComplete: (Boolean, String) -> Unit) {
         MyLog.d(TAG, "loginTypeCheckUser() = $user")
 
         viewModelScope.launch {
@@ -57,14 +62,13 @@ class MainViewModel : BaseViewModel() {
                 }
 
                 LoginType.GOOGLE -> { /* 구글 로그인 */
-
-                    firebaseAuthWithGoogle(
-                        idToken = user.idToken,
-                        userDao = userDao,
-                        coroutineScope = this
-                    ) { success, message ->
-                        MyLog.d(TAG, "loginGoogle() firebaseAuthWithGoogle : $success")
-                        if (success) onComplete(true, "")
+                    firebaseAuthTokenLogin { success, message ->
+                        if (success) {
+                            onComplete(true, "")
+                        } else {
+                            firebaseLoginGoogleInit(context, launcher)
+                            onComplete(false, "")
+                        }
                     }
 
                 }
@@ -94,17 +98,6 @@ class MainViewModel : BaseViewModel() {
             }
         }
     }
-
-//    suspend fun userDaoInsert(firebaseUser: FirebaseUser, email: String, password: String) {
-//        // 사용자 정보를 데이터베이스에 저장
-//        val newUser = User(
-//            uid = firebaseUser.uid,
-//            email = email,
-//            password = password,
-//            username = firebaseUser.displayName ?: ""
-//        )
-//        userDao.insertUser(newUser)
-//    }
 
     fun syncCampingSites() {
         //db데이터 또는 파이어베이스 사이트 정보 동기화.

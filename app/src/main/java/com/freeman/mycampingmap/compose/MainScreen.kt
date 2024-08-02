@@ -1,10 +1,15 @@
 package com.freeman.mycampingmap.compose
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +47,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,12 +65,28 @@ import com.freeman.mycampingmap.R
 import com.freeman.mycampingmap.activity.MapActivity
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
+import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen(viewModel: MainViewModel = viewModel()) {
 
+    val activity = (LocalContext.current as Activity)
+    var backPressedOnce by remember { mutableStateOf(false) }
+    val handler = remember { Handler(Looper.getMainLooper()) }
+
+    //뒤로가기 버튼 눌렀을때.
+    BackHandler {
+        MyLog.d(viewModel.TAG, "MainScreen() BackHandler()")
+        if (backPressedOnce) {
+            activity.finishAffinity()
+        } else {
+            backPressedOnce = true
+            handler.postDelayed({ backPressedOnce = false }, 2000)
+            Toast.makeText(activity, "한번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
     Scaffold(
         topBar = {
             CustomSmallTopAppBar(
@@ -151,7 +173,9 @@ fun CampDataListView(
         if (isLoading) {
             CircularProgressIndicator()
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(vertical = 14.dp /*상하 패딩.*/)) {
+            LazyColumn(modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 14.dp /*상하 패딩.*/)) {
                 items(syncAllCampingList) { campingSites ->
                     CampDataViewCard(campingSites,
                         //카드 클릭 이벤트

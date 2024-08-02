@@ -51,13 +51,13 @@ fun SplashScreen(
         // 위치 권한
         permission = Manifest.permission.ACCESS_FINE_LOCATION
     )
-
+    val launcher = GoogleRememberLauncherForActivityResult(navController)
 //    Log.d("Splash", "user : $user")
     LaunchedEffect(user) {
         if (locationPermissionState.status.isGranted) {
             // 위치 권한이 허용 일때. - 로그인 처리 로직
             user?.let {
-                viewModel.loginTypeCheckUser(it) { success, message ->
+                viewModel.loginTypeCheckUser(it, launcher) { success, message ->
                     if (success) {
                         Log.d("Splash", "로그인 성공")
                         //로그인 성공시 메인화면으로 이동.
@@ -65,7 +65,7 @@ fun SplashScreen(
                             popUpTo(Screen.Splash.route) { inclusive = true }
                         }
                     } else {
-                        Log.d("Splash", "로그인 실패")
+                        Log.d("Splash", message)
                     }
                 }
             }

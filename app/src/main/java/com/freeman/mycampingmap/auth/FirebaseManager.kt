@@ -1,12 +1,11 @@
 package com.freeman.mycampingmap.auth
 
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
-import androidx.lifecycle.viewModelScope
+import androidx.activity.result.IntentSenderRequest
 import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.R
 import com.freeman.mycampingmap.data.CampingDataUtil.createCampingSiteData
@@ -16,8 +15,9 @@ import com.freeman.mycampingmap.db.User
 import com.freeman.mycampingmap.db.UserDao
 import com.freeman.mycampingmap.db.UserFactory.createUser
 import com.freeman.mycampingmap.utils.MyLog
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.identity.BeginSignInRequest
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.android.libraries.places.api.model.Place
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
@@ -25,9 +25,6 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -81,11 +78,15 @@ object FirebaseManager {
         FirebaseAuth.getInstance().currentUser?.getIdToken(true)
             ?.addOnCompleteListener { idTokenTask ->
                 if (idTokenTask.isSuccessful) {
+                    val idToken: String = idTokenTask.result?.token ?: ""
+                    Log.d(TAG, "idToken = $idToken")
                     onResult(true, null)
                 } else {
-                    onResult(false, "계정 인증에 실패 하였습니다.")
+                    onResult(false, "구글 로그인 토큰 만료")
                 }
-            }
+            } ?: run {
+            onResult(false, "로그인 실패")
+        }
     }
 
     fun firebaseSaveUser(onComplet: (Boolean, User, String) -> Unit) {
@@ -250,14 +251,14 @@ object FirebaseManager {
         FirebaseAuth.getInstance().signInWithCredential(credential)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    MyLog.d( "signInWithCredential:success saveUserData = $saveUserData")
+                    MyLog.d("signInWithCredential:success saveUserData = $saveUserData")
                     // 성공 처리
                     val uid = task.result?.user?.uid
                     val email = task.result?.user?.email
                     val displayName = task.result?.user?.displayName
 
                     if (saveUserData) {
-                        MyLog.d( "task.result?.user = ${task.result?.user?.uid}")
+                        MyLog.d("task.result?.user = ${task.result?.user?.uid}")
                         val u = createUser(
                             coroutinScope = coroutineScope,
                             userDao = userDao,
@@ -278,19 +279,138 @@ object FirebaseManager {
             }
     }
 
-    fun loginGoogleInit(
+    fun firebaseLoginGoogleInit(
         context: Context,
-        launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
+        launcher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>
     ) {
-        val googleSignInOptions = GoogleSignInOptions
-            .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.resources.getString(R.string.default_web_client_id))
-            .requestEmail()
+        val signInRequest = BeginSignInRequest.builder()
+            .setGoogleIdTokenRequestOptions(
+                BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
+                    .setSupported(true)
+                    // Your server's client ID, not your Android client ID.
+                    .setServerClientId(context.resources.getString(R.string.default_web_client_id))
+                    // Only show accounts previously used to sign in.
+                    .setFilterByAuthorizedAccounts(true)
+                    .build()
+            )
             .build()
 
-        val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
-        launcher.launch(googleSignInClient.signInIntent)
+        val signInClient: SignInClient = Identity.getSignInClient(context)
+        signInClient.beginSignIn(signInRequest)
+            .addOnSuccessListener { result ->
+                MyLog.d(TAG, "Google Sign-In success")
+                val intentSenderRequest = IntentSenderRequest.Builder(result.pendingIntent.intentSender).build()
+                launcher.launch(intentSenderRequest)
+            }
+            .addOnFailureListener { e ->
+                MyLog.e(TAG, "Google Sign-In failed: ${e.message}")
+            }
+
+
+//        val googleSignInOptions = GoogleSignInOptions
+//            .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+//            .requestIdToken(context.resources.getString(R.string.default_web_client_id))
+//            .requestEmail()
+//            .build()
+//
+//        val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
+//        launcher.launch(googleSignInClient.signInIntent)
     }
 
+    fun firebaseLoginGoogle(
+        activityResult: ActivityResult,
+        coroutionScope: CoroutineScope,
+        saveUserData: Boolean = false,
+        userDao: UserDao,
+        onComplete: (Boolean, String) -> Unit
+    ) {
+        MyLog.d(TAG, "loginGoogle()")
+        val signInClient: SignInClient = Identity.getSignInClient(MyApplication.context)
+        val credential = signInClient.getSignInCredentialFromIntent(activityResult.data)
+        val idToken = credential.googleIdToken
+        MyLog.d(TAG, "loginGoogle() idToken = $idToken")
+        when {
+            idToken != null -> {
+                // Got an ID token from Google. Use it to authenticate
+                // with Firebase.
+                val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
+                FirebaseAuth.getInstance().signInWithCredential(firebaseCredential)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            // Sign in success, update UI with the signed-in user's information
+                            Log.d(TAG, "signInWithCredential:success")
+                            val user = FirebaseAuth.getInstance().currentUser
+                            if (saveUserData) {
+                                updateUser(idToken, user, coroutionScope, userDao) { success, message ->
+                                    if (success) onComplete(true, "")
+                                    else onComplete(false, "")
+                                }
+                            } else {
+                                onComplete(true, "")
+                            }
+
+                        } else {
+                            // If sign in fails, display a message to the user.
+                            Log.w(TAG, "signInWithCredential:failure", task.exception)
+                            onComplete(false, "")
+                        }
+                    }
+            }
+
+            else -> {
+                // Shouldn't happen.
+                Log.d(TAG, "No ID token!")
+                onComplete(false, "")
+            }
+        }
+
+//        val task = GoogleSignIn.getSignedInAccountFromIntent(activityResult.data)
+//        task.addOnCompleteListener { completedTask ->
+//            MyLog.d(TAG, "loginGoogle() addOnCompleteListener()")
+//            try {
+//                val account = completedTask.getResult(ApiException::class.java)
+//                val idToken = account.idToken
+//                MyLog.d(TAG, "loginGoogle() addOnCompleteListener() idToken = $idToken")
+//                if (idToken != null) {
+//                    firebaseAuthWithGoogle(idToken, saveUserData, userDao, coroutionScope) { success, message ->
+//                        Log.d(TAG, "loginGoogle() firebaseAuthWithGoogle : $success")
+//                        if (success) onComplete(true, "")
+//                    }
+//                } else {
+//                    MyLog.e("Google ID Token is null")
+//                    onComplete(false, "")
+//                }
+//            } catch (e: ApiException) {
+//                MyLog.e("Google sign in failed: ${e.statusCode} ${e.status}")
+//                Toast.makeText(MyApplication.context, "구글 로그인 실패: ${e.statusCode}", Toast.LENGTH_SHORT).show()
+//                onComplete(false, "")
+//            }
+//        }
+    }   //loginGoogle
+
+    private fun updateUser(
+        idToken: String,
+        user: FirebaseUser?,
+        coroutionScope: CoroutineScope,
+        userDao: UserDao,
+        saveUserData:Boolean = false,
+        onComplete: (Boolean, String) -> Unit
+    ) {
+        MyLog.d(TAG, "loginGoogle() idToken = $idToken")
+        MyLog.d(TAG, "loginGoogle() user.udi = ${user?.uid}")
+        MyLog.d(TAG, "loginGoogle() user.email = ${user?.email}")
+        MyLog.d(TAG, "loginGoogle() user.displayName = ${user?.displayName}")
+
+        firebaseAuthWithGoogle(
+            idToken,
+            saveUserData,
+            userDao,
+            coroutionScope
+        ) { success, message ->
+            Log.d(TAG, "loginGoogle() firebaseAuthWithGoogle : $success")
+            if (success) onComplete(true, "")
+        }
+
+    }
 
 }

@@ -3,6 +3,7 @@
     <string name="title_activity_map">MapActivity</string>
 
     <string name="default_web_client_id">287683711696-258mj1anujlruli1p7qlv6384fe3h34b.apps.googleusercontent.com</string>
+<!--    <string name="default_web_client_id">287683711696-0ednnu8hrtjem4t16346uit1ggfaduur.apps.googleusercontent.com</string>-->
     <string name="title_activity_splash_screen">SplashScreen</string>
 
 </resources>
