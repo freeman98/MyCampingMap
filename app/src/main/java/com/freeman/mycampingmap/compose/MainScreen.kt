@@ -14,6 +14,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -168,13 +169,14 @@ fun MainScreen(
             contentAlignment = Alignment.Center
         ) {
             //캠핑장 리스트
-            CampDataListView()
+            CampingSiteListView()
         }
     }
 }
 
 @Composable
-fun mapRememberLauncherForActivityResult(viewModel: MainViewModel = viewModel()
+fun mapRememberLauncherForActivityResult(
+    viewModel: MainViewModel = viewModel()
 ): ManagedActivityResultLauncher<Intent, ActivityResult> {
     return rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -402,7 +404,7 @@ fun CustomTopAppBar(
             }
         }
 
-        )   //TopAppBar
+    )   //TopAppBar
 }
 
 fun gotoMapActivity(
@@ -413,8 +415,9 @@ fun gotoMapActivity(
     launcher?.launch(intent) ?: context.startActivity(intent)
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CampDataListView(
+fun CampingSiteListView(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = viewModel()
 ) {
@@ -429,6 +432,22 @@ fun CampDataListView(
     }
 
     Log.d(viewModel.TAG, "CampDataListView() syncAllCampingList.size = ${syncAllCampingList.size}")
+
+    //캠핑장 리스트 그룹화.
+    val groupedItems =
+        syncAllCampingList.groupBy { it.address.substringAfter(' ').substringBefore(' ') }
+
+    val onCardClick = { campingSite: CampingSite ->
+        //카드 클릭 이벤트.
+        viewModel.selectCampingSite(campingSite)
+        gotoMapActivity(context)
+    }
+
+    val onCardDeleteClick = { campingSite: CampingSite ->
+        //카드 삭제 이벤트.
+        viewModel.deleteCampingSite(campingSite)
+    }
+
     //메모리 관리가 들어간 LazyColumn
     Box(
         modifier = Modifier
@@ -444,21 +463,29 @@ fun CampDataListView(
                     .fillMaxSize()
                     .padding(vertical = 14.dp /*상하 패딩.*/)
             ) {
-                items(syncAllCampingList) { campingSites ->
-                    CampDataViewCard(campingSites,
-                        //카드 클릭 이벤트
-                        onCardClick = { campingSite ->
-//                    Log.d(viewModel.TAG, "onCardClick() $campingSite")
-                            viewModel.selectCampingSite(campingSite)
-                            gotoMapActivity(context)
-                        },
-                        //카드 삭제 이벤트.
-                        onCardDeleteClick = { campingSite ->
-                            viewModel.deleteCampingSite(campingSite)
-                        }
+                groupedItems.forEach { (manufacturer, models) ->
+                    //그룹 헤더
+                    stickyHeader {
+                        androidx.compose.material.Text(
+                            text = manufacturer,
+                            color = Color.White,
+                            modifier = Modifier
+                                .background(Color.Gray)
+                                .padding(5.dp)
+                                .fillMaxWidth()
+                        )
+                    }
 
-                    )   //CampDataViewCard
-                }   //items
+                    items(models) { campingSites ->
+                        CampDataViewCard(campingSites,
+                            //카드 클릭 이벤트
+                            onCardClick = onCardClick,
+                            //카드 삭제 이벤트.
+                            onCardDeleteClick = onCardDeleteClick
+                        )   //CampDataViewCard
+                    }   //items
+
+                }
             }   //LazyColumn
         }   //if (isLoading)
     }
