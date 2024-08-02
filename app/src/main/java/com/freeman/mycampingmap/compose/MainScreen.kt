@@ -8,31 +8,39 @@ import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.Space
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Divider
 import androidx.compose.material.Scaffold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -59,6 +67,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
@@ -89,33 +98,18 @@ fun MainScreen(
     navController: NavHostController,
     viewModel: MainViewModel = viewModel()
 ) {
-    val activity = (LocalContext.current as Activity)
-    var backPressedOnce by remember { mutableStateOf(false) }
-    val handler = remember { Handler(Looper.getMainLooper()) }
-
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
 
     val systemInsets = WindowInsets.systemBars
-
-    // dp 값으로 변환
+    // dp 값으로 변환 - 드로어 상단 패딩
     val topPadding = with(LocalDensity.current) { systemInsets.getTop(this).toDp() }
-    val bottomPadding = with(LocalDensity.current) { systemInsets.getBottom(this).toDp() }
 
-    BackHandler {
-        //메인 화면에서 뒤로가기 버튼 눌렀을때
-        MyLog.d(viewModel.TAG, "MainScreen() BackHandler()")
-        if (backPressedOnce) {
-            // 두 번째 뒤로가기 눌렀을 때 - 앱종료
-            activity.finishAffinity()
-        } else {
-            // 첫 번째 뒤로가기 눌렀을 때 - 토스트 띄우기 2초 대기 후 다시 눌러야 종료
-            backPressedOnce = true
-            handler.postDelayed({ backPressedOnce = false }, 2000)
-            Toast.makeText(activity, "한번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show()
-        }
-    }
+    //뒤로가기 버튼 눌렀을때
+    MainScreenBackHandler()
+
     Scaffold(
+        //상단바
         topBar = {
             CustomTopAppBar(
                 title = "My Camping List",
@@ -127,7 +121,20 @@ fun MainScreen(
                 }
             )
         },
-        drawerContent = { DrawerSideContent(navController) },    //드로어 컨텐츠
+        //사이드 메뉴
+        drawerContent = {
+            DrawerSideContent(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .padding(top = topPadding + 10.dp, start = 10.dp, end = 10.dp),
+                navController = navController
+            ) {
+                scope.launch {
+                    scaffoldState.drawerState.close()    //드로어 닫기.
+                }
+            }
+        },
         drawerGesturesEnabled = scaffoldState.drawerState.isOpen,   //드로어 터치 이벤트
         scaffoldState = scaffoldState,          //스캐폴드 상태
         drawerShape = customDrawerShape(topPadding),      //드로어 모양
@@ -143,6 +150,29 @@ fun MainScreen(
             CampDataListView()
         }
     }
+}
+
+@Composable
+fun MainScreenBackHandler(
+    activity: Activity = LocalContext.current as Activity,
+) {
+    var backPressedOnce by remember { mutableStateOf(false) }
+    val handler = remember { Handler(Looper.getMainLooper()) }
+
+    //뒤로가기 버튼 눌렀을때
+    BackHandler {
+        //메인 화면에서 뒤로가기 버튼 눌렀을때
+        MyLog.d("MainScreen() BackHandler()")
+        if (backPressedOnce) {
+            // 두 번째 뒤로가기 눌렀을 때 - 앱종료
+            activity.finishAffinity()
+        } else {
+            // 첫 번째 뒤로가기 눌렀을 때 - 토스트 띄우기 2초 대기 후 다시 눌러야 종료
+            backPressedOnce = true
+            handler.postDelayed({ backPressedOnce = false }, 2000)
+            Toast.makeText(activity, "한번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show()
+        }
+    }   //BackHandler
 }
 
 fun customDrawerShape(topPadding: Dp) = object : Shape {
@@ -168,37 +198,123 @@ fun customDrawerShape(topPadding: Dp) = object : Shape {
 
 
 @Composable
-fun DrawerSideContent(navController: NavHostController) {
+fun DrawerSideContent(
+    modifier: Modifier = Modifier,
+    navController: NavHostController,
+    viewModel: MainViewModel = viewModel(),
+    onClickClose: () -> Unit
+) {
     // DrawerContent 사이드 메뉴
-    Column() {
-        Text(text = "MENU 1")
-        Text(text = "MENU 2")
-        Text(text = "MENU 3")
-        Text(text = "MENU 4")
+    val user by viewModel.user.observeAsState()
+    val typography = MaterialTheme.typography
 
+    val paddingMdifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
+    val scrollState = rememberScrollState()
+
+    Column(modifier = Modifier
+        .verticalScroll(scrollState)
+        .then(modifier)) {
+        Row(modifier = paddingMdifier, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                modifier = Modifier.weight(1f),
+                text = user?.email ?: "", style = typography.titleLarge
+            )
+            //사이드 메뉴 닫기 이벤트.
+            DrawerSideMenuCloseButton(onClick = onClickClose)
+        }
+        Text(modifier = paddingMdifier, text = user?.username ?: "", style = typography.titleMedium)
+        Divider(modifier = paddingMdifier, color = Color.Gray, thickness = 1.dp)
+        Text(modifier = paddingMdifier, text = "MENU 1")
+        Text(modifier = paddingMdifier, text = "MENU 2")
+        Divider(modifier = paddingMdifier, color = Color.Gray, thickness = 1.dp)
+        Text(modifier = paddingMdifier, text = "MENU 3")
+        Text(modifier = paddingMdifier, text = "MENU 4")
+        Divider(modifier = paddingMdifier, color = Color.Gray, thickness = 1.dp)
+        Text(modifier = paddingMdifier, text = "MENU 5")
+        Text(modifier = paddingMdifier, text = "MENU 6")
+        Divider(modifier = paddingMdifier, color = Color.Gray, thickness = 1.dp)
+        Text(modifier = paddingMdifier, text = "MENU 7")
+        Text(modifier = paddingMdifier, text = "MENU 8")
+        Divider(modifier = paddingMdifier, color = Color.Gray, thickness = 1.dp)
+        Text(modifier = paddingMdifier, text = "MENU 9")
+        Text(modifier = paddingMdifier, text = "MENU 16")
+        Divider(modifier = paddingMdifier, color = Color.Gray, thickness = 1.dp)
         //로그아웃
-        SideMenuLogout(navController)
+        DrawerSideMenuLogout(navController)
+        Spacer(modifier = Modifier.height(10.dp))
+    }
+}
+
+@Composable
+fun DrawerSideMenuCloseButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    IconButton(
+        modifier = modifier,
+        onClick = onClick
+    ) {
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = "Delete"
+        )
     }
 }
 
 @Preview
 @Composable
 fun DrawerSideContentPreview() {
-    DrawerSideContent(navController = NavHostController(LocalContext.current))
+    DrawerSideContent(navController = NavHostController(LocalContext.current), onClickClose = {})
 }
 
 @Composable
-fun SideMenuLogout(navController: NavHostController, viewModel: MainViewModel = viewModel()) {
+fun DrawerSideMenuLogout(navController: NavHostController, viewModel: MainViewModel = viewModel()) {
     //로그아웃
-    TextButton(onClick = { /*로그아웃*/
-        MyLog.d("MainScreen", "SideMenuLogout() logout()")
-        viewModel.logout()
-        navController.navigate(Screen.Splash.route) {
-            popUpTo(Screen.Home.route) { inclusive = true }
-        }
-    }) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    if (showDialog) {
+        LogoutDialog(
+            onDismiss = { showDialog = false },
+            onConfirm = {onConfirm ->
+                MyLog.d("MainScreen", "SideMenuLogout() logout()")
+                showDialog = false
+                if (onConfirm) {
+                    viewModel.logout()
+                    navController.navigate(Screen.Splash.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                }
+            })
+    }
+
+    TextButton(onClick = { showDialog = true }) {
+        Icon(imageVector = Icons.Default.ExitToApp, contentDescription = "Logout")
         Text(text = "로그아웃")
     }
+}
+
+@Composable
+fun LogoutDialog(onDismiss: () -> Unit, onConfirm: (Boolean) -> Unit) {
+    //로그아웃 확인 다이얼로그
+    AlertDialog(
+        onDismissRequest = onDismiss,   //다이얼로그 밖 클릭시 닫힘.
+        title = { Text("로그아웃 확인") },
+        text = { Text("로그아웃을 하겠습니까?") },
+        confirmButton = {
+            //확인 버튼
+            TextButton(
+                onClick = { onConfirm(true) }
+            ) {
+                Text("로그아웃")
+            }
+        },
+        dismissButton = {
+            //취소 버튼
+            TextButton(
+                onClick = { onConfirm(false) }
+            ) {
+                Text("취소")
+            }
+        }
+    )
+
 }
 
 //공용으로 쓰는 상단 바.
@@ -356,7 +472,6 @@ fun CardDeleteImageButton(
     campingSite: CampingSite,
     modifier: Modifier = Modifier,
     onClick: (CampingSite) -> Unit,
-    viewModel: MainViewModel = viewModel()
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
@@ -364,7 +479,6 @@ fun CardDeleteImageButton(
     IconButton(
         modifier = modifier,
         onClick = {
-//            onClick(capingSite)
             showDialog = true
         }
     ) {
@@ -398,6 +512,7 @@ fun CardDeleteAlartDialog(
         title = { Text("삭제 확인") },
         text = { Text("이 캠핑장을 삭제하시겠습니까?") },
         confirmButton = {
+            //확인 버튼
             TextButton(
                 onClick = { onConfirm(true) }
             ) {
@@ -405,6 +520,7 @@ fun CardDeleteAlartDialog(
             }
         },
         dismissButton = {
+            //취소 버튼
             TextButton(
                 onClick = { onConfirm(false) }
             ) {
