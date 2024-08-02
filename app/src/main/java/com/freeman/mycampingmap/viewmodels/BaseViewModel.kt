@@ -88,6 +88,10 @@ open class BaseViewModel : ViewModel() {
         return campingSiteRepository.allCampingList()
     }
 
+    fun dbAllCampingSite() = viewModelScope.launch(Dispatchers.IO) {
+        campingSiteRepository.allDelete()
+    }
+
     fun dbCampingSiteInsert(
         campingSite: CampingSite,
         onSuccess: (Boolean) -> Unit
@@ -139,17 +143,18 @@ open class BaseViewModel : ViewModel() {
                     auth.currentUser?.let { firebaseUser ->
                         viewModelScope.launch {
                             // 사용자 정보를 데이터베이스에 저장
-                            if (saveUserData) createUser(
-                                this,
-                                userDao = userDao,
-                                uid = firebaseUser.uid,
-                                email = email,
-                                password = password
-                            )
+                            if (saveUserData) {
+                                createUser(
+                                    this,
+                                    uid = firebaseUser.uid,
+                                    email = email,
+                                    password = password
+                                )
+                            }
                             _isLoading.value = false
                             onComplete(true, "로그인 성공")
                         }   //viewModelScope.launch
-                    }
+                    } ?: run { onComplete(false, message ?: "로그인 실패") }
                 } else {
                     _isLoading.value = false
                     onComplete(false, message ?: "로그인 실패")

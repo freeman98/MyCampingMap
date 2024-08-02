@@ -23,4 +23,8 @@ class CampingSiteRepository(private val campingSiteDao: CampingSiteDao) {
     suspend fun delete(campingSite: CampingSite) {
         campingSiteDao.delete(campingSite)
     }
+
+    suspend fun allDelete() {
+        campingSiteDao.allDelete()
+    }
 }

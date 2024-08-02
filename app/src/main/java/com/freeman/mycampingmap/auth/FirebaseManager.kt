@@ -242,7 +242,6 @@ object FirebaseManager {
     fun firebaseAuthWithGoogle(
         idToken: String,
         saveUserData: Boolean = false,
-        userDao: UserDao,
         coroutineScope: CoroutineScope,
         onComplete: (Boolean, String) -> Unit
     ) {
@@ -261,7 +260,6 @@ object FirebaseManager {
                         MyLog.d("task.result?.user = ${task.result?.user?.uid}")
                         val u = createUser(
                             coroutinScope = coroutineScope,
-                            userDao = userDao,
                             uid = uid ?: "",
                             email = email ?: "",
                             username = displayName ?: "",
@@ -321,7 +319,6 @@ object FirebaseManager {
         activityResult: ActivityResult,
         coroutionScope: CoroutineScope,
         saveUserData: Boolean = false,
-        userDao: UserDao,
         onComplete: (Boolean, String) -> Unit
     ) {
         MyLog.d(TAG, "loginGoogle()")
@@ -340,13 +337,9 @@ object FirebaseManager {
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "signInWithCredential:success")
                             val user = FirebaseAuth.getInstance().currentUser
-                            if (saveUserData) {
-                                updateUser(idToken, user, coroutionScope, userDao) { success, message ->
-                                    if (success) onComplete(true, "")
-                                    else onComplete(false, "")
-                                }
-                            } else {
-                                onComplete(true, "")
+                            updateUser(idToken, user, coroutionScope, saveUserData) { success, message ->
+                                if (success) onComplete(true, "")
+                                else onComplete(false, "")
                             }
 
                         } else {
@@ -392,7 +385,6 @@ object FirebaseManager {
         idToken: String,
         user: FirebaseUser?,
         coroutionScope: CoroutineScope,
-        userDao: UserDao,
         saveUserData:Boolean = false,
         onComplete: (Boolean, String) -> Unit
     ) {
@@ -404,7 +396,6 @@ object FirebaseManager {
         firebaseAuthWithGoogle(
             idToken,
             saveUserData,
-            userDao,
             coroutionScope
         ) { success, message ->
             Log.d(TAG, "loginGoogle() firebaseAuthWithGoogle : $success")

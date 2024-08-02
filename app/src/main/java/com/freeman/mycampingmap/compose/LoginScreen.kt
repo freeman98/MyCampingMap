@@ -51,6 +51,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.R
+import com.freeman.mycampingmap.auth.FirebaseManager.firebaseLoginGoogle
 import com.freeman.mycampingmap.auth.FirebaseManager.firebaseLoginGoogleInit
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.utils.validateAndLoginCheck
@@ -142,10 +143,10 @@ fun GoogleRememberLauncherForActivityResult(
         MyLog.d("LoginScreen", "activityResult.resultCode : ${activityResult.resultCode}")
         if (activityResult.resultCode == Activity.RESULT_OK) {
 
-            viewModel.loginGoogle(
+            firebaseLoginGoogle(
                 activityResult = activityResult,
                 coroutionScope = coroutionScope,
-                saveUserData = true
+                saveUserData = true,
             ) { success, message ->
                 if (success) {
                     navController.navigate(Screen.Home.route) {
@@ -153,6 +154,17 @@ fun GoogleRememberLauncherForActivityResult(
                     }
                 }
             }
+//            viewModel.loginGoogle(
+//                activityResult = activityResult,
+//                coroutionScope = coroutionScope,
+//                saveUserData = true
+//            ) { success, message ->
+//                if (success) {
+//                    navController.navigate(Screen.Home.route) {
+//                        popUpTo(Screen.Login.route) { inclusive = true }
+//                    }
+//                }
+//            }
         }else{
             //구글 로그인 실패 하면 앱종료
             (context as? Activity)?.finishAffinity()

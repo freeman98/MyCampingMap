@@ -2,6 +2,7 @@ package com.freeman.mycampingmap.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.utils.MyLog
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +28,6 @@ enum class LoginType {
 object UserFactory {
     fun createUser(
         coroutinScope: CoroutineScope,
-        userDao: UserDao,
         uid: String,
         email: String,
         password: String = "",
@@ -47,7 +47,8 @@ object UserFactory {
         )
 //        userDao.insertUser(user)
         coroutinScope.launch(Dispatchers.IO) {
-            userDao.insertUser(user)
+            UserDatabase.getDatabase(MyApplication.context).userDao().insertUser(user)
+//            userDao.insertUser(user)
         }
         return user
     }

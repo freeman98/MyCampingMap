@@ -33,11 +33,11 @@ class MainViewModel : BaseViewModel() {
     val TAG = this::class.java.simpleName
 
     //파이어베이스 캠핑장 리스트 정보
-    private val _firebaseCampingSites = MutableLiveData<List<CampingSite>>()
-    val firebaseCampingSites: LiveData<List<CampingSite>> = _firebaseCampingSites
+//    private val _firebaseCampingSites = MutableLiveData<List<CampingSite>>()
+//    val firebaseCampingSites: LiveData<List<CampingSite>> = _firebaseCampingSites
 
-    private val _dbAllCampingSites = MutableLiveData<List<CampingSite>>()
-    val dbAllCampingSites: LiveData<List<CampingSite>> = _dbAllCampingSites
+//    private val _dbAllCampingSites = MutableLiveData<List<CampingSite>>()
+//    val dbAllCampingSites: LiveData<List<CampingSite>> = _dbAllCampingSites
 
     // 캠핑장 삭제 플레그 - 삭제중에 데이터 싱크가 일어나지 않게 하기 위해.
     var isDeleting: Boolean = false
@@ -152,6 +152,19 @@ class MainViewModel : BaseViewModel() {
                 isDeleting = false
             }
         }
+    }
+
+    fun logout() {
+        //로그아웃
+        MyLog.d(TAG, "logout()")
+        //db 로그아웃
+        viewModelScope.launch(Dispatchers.IO) {
+            userDao.deleteUser()    //유져 db정보 삭제
+            dbAllCampingSite()
+            //파이어베이스 로그아웃
+            FirebaseAuth.getInstance().signOut()
+        }
+
     }
 
 }

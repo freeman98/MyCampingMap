@@ -9,21 +9,20 @@ class LoginViewModel : BaseViewModel() {
 
     val TAG = this::class.java.simpleName
 
-    fun loginGoogle(
-        activityResult: ActivityResult,
-        coroutionScope: CoroutineScope,
-        saveUserData: Boolean = false,
-        onComplete: (Boolean, String) -> Unit
-    ) {
-
-        firebaseLoginGoogle(
-            activityResult = activityResult,
-            coroutionScope = coroutionScope,
-            saveUserData = saveUserData,
-            userDao = userDao,
-            onComplete = onComplete
-        )
-    }   //loginGoogle
+//    fun loginGoogle(
+//        activityResult: ActivityResult,
+//        coroutionScope: CoroutineScope,
+//        saveUserData: Boolean = false,
+//        onComplete: (Boolean, String) -> Unit
+//    ) {
+//
+//        firebaseLoginGoogle(
+//            activityResult = activityResult,
+//            coroutionScope = coroutionScope,
+//            saveUserData = saveUserData,
+//            onComplete = onComplete
+//        )
+//    }   //loginGoogle
 
     fun loginFacebook() {
         // 페이스북 로그인

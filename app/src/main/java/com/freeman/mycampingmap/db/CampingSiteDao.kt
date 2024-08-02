@@ -25,4 +25,7 @@ interface CampingSiteDao {
 
     @Delete
     suspend fun delete(campingSite: CampingSite)
+
+    @Query("DELETE FROM camping_site_table")
+    suspend fun allDelete()
 }
