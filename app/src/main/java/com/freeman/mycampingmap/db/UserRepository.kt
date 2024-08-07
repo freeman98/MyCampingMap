@@ -1,10 +1,41 @@
 package com.freeman.mycampingmap.db
 
-import kotlinx.coroutines.flow.Flow
+import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 class UserRepository(private val userDao: UserDao) {
-    suspend fun getUser(): Flow<User?> = userDao.getUser()
-    suspend fun insertUser(user: User) = userDao.insertUser(user)
-    suspend fun deleteUser(user: User) = userDao.deleteUser()
+
+    val userData = MutableLiveData<User?>()
+
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+//    fun getUser(): Flow<User?> = userDao.getUser()
+
+    fun getUser() {
+        coroutineScope.launch(Dispatchers.Main) {
+            userData.value = asyncUser().await()
+        }
+    }
+
+    private fun asyncUser(): Deferred<User?> =
+        coroutineScope.async(Dispatchers.IO) {
+            return@async userDao.getUser()
+        }
+
+
+    fun insertUser(user: User) {
+        coroutineScope.launch(Dispatchers.IO) {
+            userDao.insertUser(user)
+        }
+    }
+
+    fun deleteUser() {
+        coroutineScope.launch(Dispatchers.IO) {
+            userDao.deleteUser()
+        }
+    }
 
 }

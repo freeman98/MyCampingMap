@@ -34,7 +34,6 @@ object CampingDataUtil {
         localSites: List<CampingSite>,
         remoteSites: List<CampingSite>,
         campingSiteRepository: CampingSiteRepository,
-        coroutineScope: CoroutineScope
     ): List<CampingSite> {
         // 캠핑장 데이터 리스트 동기화
         MyLog.d(TAG, "syncCampingSites()")
@@ -43,34 +42,20 @@ object CampingDataUtil {
             // 로컬 DB과 파이어베이스에 없는 캠핑장 정보
             MyLog.d(TAG, "syncCampingSites() localOnly.size: ${localOnly.size}")
             MyLog.d(TAG, "syncCampingSites() remoteOnly.size: ${remoteOnly.size}")
-            coroutineScope.launch(Dispatchers.IO) {
-                // 파이어베이스에만 있는 캠핑장 정보는 db에 저장.
-                if(remoteOnly.size > 0 ) {
-                    MyLog.d(TAG, "syncCampingSites() campingSiteRepository.insertAll")
-                    campingSiteRepository.insertAll(remoteOnly)
-                }
-                // db에만 있는 캠핑장 정보는 파이어베이스에 저장.
-                if(localOnly.size > 0) {
-                    addFirebaseCampingSites(localOnly) {MyLog.d(TAG, "syncCampingSites() addFirebaseCampingSites()")
-                        if (!it) Toast.makeText( MyApplication.context, "캠핑장 정보 저장 실패", Toast.LENGTH_SHORT).show()
-                    }
-                }
-//                withContext(Dispatchers.IO) {
-//                    // 파이어베이스에만 있는 캠핑장 정보는 db에 저장.
-//                    if(remoteOnly.size > 0 ) {
-//                        MyLog.d(TAG, "syncCampingSites() campingSiteRepository.insertAll")
-//                        campingSiteRepository.insertAll(remoteOnly)
-//                    }
-//                    // db에만 있는 캠핑장 정보는 파이어베이스에 저장.
-//                    if(localOnly.size > 0) {
-//                        addFirebaseCampingSites(localOnly) {MyLog.d(TAG, "syncCampingSites() addFirebaseCampingSites()")
-//                            if (!it) Toast.makeText( MyApplication.context, "캠핑장 정보 저장 실패", Toast.LENGTH_SHORT).show()
-//                        }
-//                    }
-//                }
+
+            // 파이어베이스에만 있는 캠핑장 정보는 db에 저장.
+            if(remoteOnly.size > 0 ) {
+                MyLog.d(TAG, "syncCampingSites() campingSiteRepository.insertAll")
+                campingSiteRepository.insertAll(remoteOnly)
             }
-        }
-//        onSyncComplete(mergedSites)
+            // db에만 있는 캠핑장 정보는 파이어베이스에 저장.
+            if(localOnly.size > 0) {
+                addFirebaseCampingSites(localOnly) {MyLog.d(TAG, "syncCampingSites() addFirebaseCampingSites()")
+                    if (!it) Toast.makeText( MyApplication.context, "캠핑장 정보 저장 실패", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }   //findDifferences
+
         return mergedSites
     }
 

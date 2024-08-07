@@ -61,6 +61,7 @@ import com.freeman.mycampingmap.R
 import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 import com.freeman.mycampingmap.utils.IntentUtil.Companion.callPhone
 import com.freeman.mycampingmap.utils.IntentUtil.Companion.openWebPage
+import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.BaseViewModel
 import com.freeman.mycampingmap.viewmodels.MapViewModel
 import com.google.android.gms.maps.MapView
@@ -69,7 +70,7 @@ import com.google.android.libraries.places.api.model.Place
 
 @Composable
 fun MapScreen(viewModel: MapViewModel, onBackPressed: () -> Unit) {
-    Log.d(viewModel.TAG, "MapScreen()")
+    MyLog.d("MapScreen()")
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -87,7 +88,7 @@ fun MapScreen(viewModel: MapViewModel, onBackPressed: () -> Unit) {
                 .padding(top = topPadding, bottom = bottomPadding)  //상단노티, 하단네비게이션 간격.
         ) {
             //지도 그리기.
-            MapView()
+            MapView(viewModel = viewModel)
             //내 위치로 가기 버튼
             MyLocationButton(
                 modifier = Modifier
@@ -96,10 +97,12 @@ fun MapScreen(viewModel: MapViewModel, onBackPressed: () -> Unit) {
                 onClick = { viewModel.gotoMyLocation() }
             )
             //상단 검색.
-            SearchBox(onSearch = { searchText ->
-                // 검색어를 사용하여 검색 수행
-                viewModel.searchPlace(searchText)
-            },
+            SearchBox(
+                viewModel = viewModel,
+                onSearch = { searchText ->
+                    // 검색어를 사용하여 검색 수행
+                    viewModel.searchPlace(searchText)
+                },
                 onBackPressed = {
                     Log.d(viewModel.TAG, "MapScreen() onBackPressed()")
                     onBackPressed()
@@ -136,9 +139,9 @@ fun MyLocationButtonPreview() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchBox(
+    viewModel: MapViewModel,
     onSearch: (String) -> Unit,
-    onBackPressed: () -> Unit,
-    viewModel: MapViewModel = viewModel()
+    onBackPressed: () -> Unit
 ) {
     //상단 가로 정력 입력창 과 검색 버튼
     Log.d(viewModel.TAG, "SearchBox()")
@@ -215,6 +218,7 @@ fun SearchBox(
 
     //검색 리스트 컴포즈
     SearchListView(
+        viewModel = viewModel,
         onBackPressed = {
             Log.d(viewModel.TAG, "SearchBox() onBackPressed()")
             onBackPressed()
@@ -224,8 +228,8 @@ fun SearchBox(
 
 @Composable
 fun SearchListView(
+    viewModel: MapViewModel,
     modifier: Modifier = Modifier,
-    viewModel: MapViewModel = viewModel(),
     onBackPressed: () -> Unit
 ) {
     Log.d(viewModel.TAG, "serchListView()")
@@ -374,15 +378,6 @@ fun SerchListViewCard(
                 Text(text = "- 가격 : $it", style = typography.bodyMedium)
             }
             Button(onClick = { onClickCampingSite(place) }
-//                onClick = {
-//                saveUser { isSuccess, user, message ->
-//                    //사용자 정보 저장 성공.
-//                    if (isSuccess) {
-//                        //캠핑장 정보 저장.
-//                        addCampingSite(user, place)
-//                    }
-//                }
-//            }
             ) {
                 Text(text = "저장")
             }
@@ -395,23 +390,60 @@ fun SerchListViewCard(
 @Composable
 fun SearchListViewPreview() {
     MyCampingMapUITheme {
-        SearchListView(onBackPressed = {})
+        SearchListView(viewModel = viewModel(), onBackPressed = {})
     }
 }
 
 @SuppressLint("MutableCollectionMutableState")
 @Composable
-fun MapView(viewModel: MapViewModel = viewModel()) {
+fun MapView(viewModel: MapViewModel) {
     Log.d(viewModel.TAG, "MapView()")
     val googleMap by viewModel.googleMap.observeAsState()
     //내 현재 위치 - 현재 위치를 기억 하기 위해 LiveDataBus 사용.
     val currentLocation by BaseViewModel.LiveDataBus.currentMyLocation.observeAsState()
     //지도에 표시될 Place map.
-    val markerPlaceMap by viewModel.markerPlaceMap.observeAsState()
+    val markerPlaceMaps by viewModel.markerPlaceMap.observeAsState()
     // mainActivity 리스트에서 선택한 캠핑장
     val selectedCampingSite by viewModel.selectCampingSite.observeAsState()
     //mainActivity 리스트에서 선택한 캠핑장
-    val syncAllCampingList by viewModel.syncAllCampingList.observeAsState(initial = emptyList())
+    val allCampingSites by viewModel.allCampingSites.observeAsState(initial = emptyList())
+
+
+    googleMap?.let { map ->
+
+        LaunchedEffect(Unit) {
+            viewModel.getAllMyCampingSites()
+        }
+
+        LaunchedEffect(allCampingSites) {
+            if(allCampingSites.isEmpty()) return@LaunchedEffect
+            MyLog.d("myCampingSiteListMarker() allCampingSites.size() = ${allCampingSites?.size ?: 0}")
+            viewModel.myCampingSiteListMarker(allCampingSites)
+        }
+        //리스트에서 선택한 캠핑장 이 있을경우
+        LaunchedEffect(selectedCampingSite) {
+            selectedCampingSite?.let {
+                //메인 리스트에서 선택한 캠핑장 정보가 있다면.
+                Log.d(viewModel.TAG, "selectedCampingSite = $it")
+                viewModel.selectCampingSiteMarker(it)
+            }
+        }
+
+        //현재 위치가 있을경우.
+        LaunchedEffect(currentLocation) {
+            if (selectedCampingSite == null) {
+                currentLocation?.let { myLocation ->
+                    //현재 위치로 카메라 이동.
+                    viewModel.setMyLocationMarker(myLocation)
+                }
+            }
+        }
+
+        //지도에 표시될 Places 리스트가 있을경우 만 실행.
+        LaunchedEffect(markerPlaceMaps) {
+            markerPlaceMaps?.let { viewModel.gotoFirstPlace(it) }
+        }
+    }
 
     AndroidView(
         factory = { context ->
@@ -428,31 +460,6 @@ fun MapView(viewModel: MapViewModel = viewModel()) {
         modifier = Modifier.fillMaxSize()
     )
 
-    googleMap?.let { map ->
-        //리스트에서 선택한 캠핑장 이 있을경우
-        LaunchedEffect(selectedCampingSite) {
-            selectedCampingSite?.let {
-                //메인 리스트에서 선택한 캠핑장 정보가 있다면.
-                Log.d(viewModel.TAG, "selectedCampingSite = $it")
-                viewModel.selectCampingSiteMarker(it)
-            }
-        }
-
-        //현재 위치가 있을경우.
-        LaunchedEffect(currentLocation) {
-            if(selectedCampingSite == null) {
-                currentLocation?.let { myLocation ->
-                    //현재 위치로 카메라 이동.
-                    viewModel.setMyLocationMarker(myLocation)
-                }
-            }
-        }
-
-        //지도에 표시될 Places 리스트가 있을경우 만 실행.
-        LaunchedEffect(markerPlaceMap) {
-            markerPlaceMap?.let { viewModel.gotoFirstPlace(it) }
-        }
-    }
 }
 
 @Preview(showBackground = true)
@@ -467,6 +474,6 @@ fun MapScreenPreview() {
 @Composable
 fun SearchBoxPreview() {
     MyCampingMapUITheme {
-        SearchBox(onSearch = {}, onBackPressed = {})
+        SearchBox(viewModel = viewModel(), onSearch = {}, onBackPressed = {})
     }
 }

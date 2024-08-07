@@ -1,28 +1,22 @@
 package com.freeman.mycampingmap.viewmodels
 
 import android.location.Location
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.freeman.mycampingmap.MyApplication
+import com.freeman.mycampingmap.MyApplication.Companion.context
 import com.freeman.mycampingmap.auth.FirebaseManager.emailSignIn
 import com.freeman.mycampingmap.auth.FirebaseManager.firebaseAuthTokenLogin
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.db.CampingSiteDatabase
 import com.freeman.mycampingmap.db.CampingSiteRepository
-import com.freeman.mycampingmap.db.LoginType
-import com.freeman.mycampingmap.db.User
-import com.freeman.mycampingmap.db.UserDao
 import com.freeman.mycampingmap.db.UserDatabase
 import com.freeman.mycampingmap.db.UserFactory.createUser
+import com.freeman.mycampingmap.db.UserRepository
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.BaseViewModel.LiveDataBus._selectCampingSite
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,20 +27,65 @@ open class BaseViewModel : ViewModel() {
     object LiveDataBus {
 
         //메인화면에서 선택한 캠핑장 1회성 이벤트
-        val _selectCampingSite: MutableLiveData<Event<CampingSite?>> = MutableLiveData<Event<CampingSite?>>()
+        val _selectCampingSite: MutableLiveData<Event<CampingSite?>> =
+            MutableLiveData<Event<CampingSite?>>()
         val selectCampingSite: LiveData<Event<CampingSite?>> = _selectCampingSite
 
         //내 위치.
         val _currentMyLocation = MutableLiveData<Location?>()
         val currentMyLocation: LiveData<Location?> get() = _currentMyLocation
+    }
+
+    var userRepository: UserRepository
+    val campingSiteRepository: CampingSiteRepository
+
+    init {
+        MyLog.d("", "BaseViewModel() init")
+        val userDao = UserDatabase.getDatabase(context).userDao()
+        userRepository = UserRepository(userDao)
+
+        val campingSiteDao = CampingSiteDatabase.getDatabase(context).campingSiteDao()
+        campingSiteRepository = CampingSiteRepository(campingSiteDao)
+    }
+
+    suspend fun asyncDBAllCampingSiteSelect(): List<CampingSite> {
+        // 캠핑장 전체 조회
+        return campingSiteRepository.getAllCampingSites()
+    }
+
+    fun dbAllCampingSite() {
+        campingSiteRepository.allDelete()
+    }
+
+    fun dbCampingSiteInsert(
+        campingSite: CampingSite,
+        onSuccess: (Boolean) -> Unit,
+    ) {
+        // 캠핑장 추가
+        try {
+            campingSiteRepository.insert(campingSite)
+            onSuccess(true)
+        } catch (e: Exception) {
+            onSuccess(false)
+        }
+    }
+
+    fun dbCampingSiteDelete(
+        campingSite: CampingSite,
+        onSuccess: (Boolean) -> Unit,
+    ) {
+        // 캠핑장 삭제
+        try {
+            campingSiteRepository.delete(campingSite)
+            onSuccess(true)
+        } catch (e: Exception) {
+            onSuccess(false)
+        }
 
     }
 
-    val userDao: UserDao = UserDatabase.getDatabase(MyApplication.context).userDao()
-    val user: LiveData<User?> = userDao.getUser().asLiveData()
-
     // 내 캠핑장 리스트 정보
-    open val _syncAllCampingList = MutableLiveData<List<CampingSite>>()
+    val _syncAllCampingList = MutableLiveData<List<CampingSite>>()
     val syncAllCampingList: LiveData<List<CampingSite>> = _syncAllCampingList
 
     //로딩 컨트롤을 위한 LiveData
@@ -59,7 +98,6 @@ open class BaseViewModel : ViewModel() {
 
     // LiveData를 이용한 1회성 이벤트
     class Event<out T>(private val content: T) {
-
         private var hasBeenHandled = false
 
         fun getContentIfNotHandled(): T? {
@@ -74,64 +112,11 @@ open class BaseViewModel : ViewModel() {
         fun peekContent(): T = content
     }
 
-    val campingSiteRepository: CampingSiteRepository
-//    val dbAllCampingSites: LiveData<List<CampingSite>>
-
-    init {
-        val campingSiteDao = CampingSiteDatabase.getDatabase(MyApplication.context).campingSiteDao()
-        campingSiteRepository = CampingSiteRepository(campingSiteDao)
-//        dbAllCampingSites = campingSiteRepository.allCampingSites
-    }
-
-    suspend fun dbAllCampingSiteSelect(): List<CampingSite> {
-        // 캠핑장 전체 조회
-        return campingSiteRepository.allCampingList()
-    }
-
-    fun dbAllCampingSite() = viewModelScope.launch(Dispatchers.IO) {
-        campingSiteRepository.allDelete()
-    }
-
-    fun dbCampingSiteInsert(
-        campingSite: CampingSite,
-        onSuccess: (Boolean) -> Unit
-    ) = viewModelScope.launch(Dispatchers.IO) {
-        // 캠핑장 추가
-        try {
-            campingSiteRepository.insert(campingSite)
-            withContext(Dispatchers.Main) {
-                onSuccess(true)
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                onSuccess(false)
-            }
-        }
-    }
-
-    fun dbCampingSiteDelete(
-        campingSite: CampingSite,
-        onSuccess: (Boolean) -> Unit,
-    ) = viewModelScope.launch(Dispatchers.IO) {
-        // 캠핑장 삭제
-        try {
-            campingSiteRepository.delete(campingSite)
-            withContext(Dispatchers.Main) {
-                onSuccess(true)
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                onSuccess(false)
-            }
-        }
-
-    }
-
     fun emailLogin(
         email: String,
         password: String,
         saveUserData: Boolean = false,
-        onComplete: (Boolean, String) -> Unit
+        onComplete: (Boolean, String) -> Unit,
     ) {
         // 파이어베이스 이메일 로그인.
         MyLog.d("", "emailLogin() = $email, $password")
@@ -145,7 +130,6 @@ open class BaseViewModel : ViewModel() {
                             // 사용자 정보를 데이터베이스에 저장
                             if (saveUserData) {
                                 createUser(
-                                    this,
                                     uid = firebaseUser.uid,
                                     email = email,
                                     password = password

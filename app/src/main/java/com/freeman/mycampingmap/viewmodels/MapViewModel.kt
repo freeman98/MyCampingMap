@@ -9,10 +9,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.MyApplication.Companion.context
 import com.freeman.mycampingmap.R
@@ -35,8 +35,7 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
 import com.google.android.libraries.places.api.net.SearchNearbyRequest
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlin.math.pow
 
 class MapViewModel : BaseViewModel() {
@@ -78,7 +77,6 @@ class MapViewModel : BaseViewModel() {
 //            Place.Field.PHOTO_METADATAS,
             Place.Field.WEBSITE_URI
         )
-
     }
 
     //
@@ -92,25 +90,29 @@ class MapViewModel : BaseViewModel() {
     private var _markerPlaceMap = MutableLiveData<MutableMap<Marker, Place>>()
     val markerPlaceMap get() = _markerPlaceMap
 
+    //내캠핑장 리스트
+//    private val _myCampingSiteMap = MutableLiveData<MutableMap<Marker, CampingSite>>()
+//    val myCampingList: MutableLiveData<MutableMap<Marker, CampingSite>> get() = _myCampingSiteMap
+
     private val _placesList = MutableLiveData<List<Place>>()
     val placesList: LiveData<List<Place>> get() = _placesList
 
     init {
+        MyLog.d(TAG, "MapViewModel() init")
         _markerPlaceMap.observeForever { markerPlaceMap ->
             _placesList.value = markerPlaceMap.values.toList()
         }
     }
 
-    //지도에 표시될 Place 리스트
-//    private val _places = MutableLiveData<List<Place>>()
-//    val places: LiveData<List<Place>> get() = _places
+    val allCampingSites: MutableLiveData<List<CampingSite>> = campingSiteRepository.allCampingSites
 
-    //내 위치 마커.
-//    private var myCurrentMarker: Marker? = null
+    fun getAllMyCampingSites() {
+        campingSiteRepository.allCampingList()
+    }
 
-//    fun setCurrentLocation(location: Location) {
-//        _currentMyLocation.value = location
-//    }
+    fun updateCampingSiteList(campingSites: List<CampingSite>) {
+        campingSiteRepository.insertAll(campingSites)
+    }
 
     private val _googleMap = MutableLiveData<GoogleMap?>()
     val googleMap: LiveData<GoogleMap?> get() = _googleMap
@@ -191,6 +193,14 @@ class MapViewModel : BaseViewModel() {
             }
         }
 
+        // 카메라 이동 리스너 추가
+        map.setOnCameraIdleListener {
+            val camerCenterLatlng = map.cameraPosition.target
+            MyLog.d(TAG, "camerCenterLatlng: Latitude = ${camerCenterLatlng.latitude}, Longitude = ${camerCenterLatlng.longitude}")
+            // 여기서 center 좌표를 활용하여 원하는 작업을 수행할 수 있습니다.
+
+        }
+
     }   // setGoogleMap
 
     class CustomInfoWindowAdapter(context: Context) : GoogleMap.InfoWindowAdapter {
@@ -240,34 +250,33 @@ class MapViewModel : BaseViewModel() {
     }
 
     private fun myCurrentLocation(onResult: (Boolean, String, String) -> Unit) {
-        MyLocation.requestLocation { isSuccess, latitude, longitude ->
-            MyLog.d(
-                TAG,
-                "myCurrentLocation() isSuccess = $isSuccess, latitude=$latitude, longitude=$longitude"
-            )
-            if (isSuccess) {
-                //내 위치 찾기 성공.
-                val mylocation = Location("").apply {
-                    this.latitude = latitude.toDouble()
-                    this.longitude = longitude.toDouble()
-                }
-                LiveDataBus._currentMyLocation.value = mylocation
-                val latlng = LatLng(mylocation.latitude, mylocation.longitude)
-                latlng.let {
+        viewModelScope.launch {
+            MyLocation.requestLocation { isSuccess, latitude, longitude ->
+                MyLog.d(TAG, "myCurrentLocation() isSuccess = $isSuccess, latitude=$latitude, longitude=$longitude")
+                if (isSuccess) {
+                    //내 위치 찾기 성공.
+                    val mylocation = Location("").apply {
+                        this.latitude = latitude.toDouble()
+                        this.longitude = longitude.toDouble()
+                    }
+                    LiveDataBus._currentMyLocation.value = mylocation
+                    val latlng = LatLng(mylocation.latitude, mylocation.longitude)
+                    latlng.let {
 
-                    _googleMap.value?.animateCamera(
-                        CameraUpdateFactory.newLatLngZoom(
-                            it,
-                            DEFAULT_ZOOM_LEVEL
+                        _googleMap.value?.animateCamera(
+                            CameraUpdateFactory.newLatLngZoom(
+                                it,
+                                DEFAULT_ZOOM_LEVEL
+                            )
                         )
-                    )
+                    }
+
+                } else {
+                    //위치 찾기 실패.
+                    onResult(false, latitude, longitude)
                 }
 
-            } else {
-                //위치 찾기 실패.
-                onResult(false, latitude, longitude)
             }
-
         }
     }
 
@@ -469,5 +478,21 @@ class MapViewModel : BaseViewModel() {
         selectedCampingSite.also { _selectCampingSite.value = it }
     }
 
+    fun myCampingSiteListMarker(myCampingList: List<CampingSite>) {
+        //내가 저장한 캠핑장 마커.
+        MyLog.d(TAG, "myCampingSiteListMarker() list.size() = ${myCampingList.size}")
+        val myCampingMaps = mutableMapOf<Marker, CampingSite>()
+        myCampingList.forEach { site ->
+            parseLatLng(site.location)?.let {latLng ->
+                val markerOption = createMarkerOptions(
+                    latLng, site.name, site.address,
+                    BitmapDescriptorFactory.HUE_BLUE
+                )
+                _googleMap.value?.addMarker(markerOption)?.let { marker ->
+                    myCampingMaps[marker] = site
+                }
+            }
+        }   //forEach
+    }
 
 }

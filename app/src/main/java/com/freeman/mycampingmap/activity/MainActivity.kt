@@ -1,28 +1,26 @@
 package com.freeman.mycampingmap.activity
 
-import android.app.Activity
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.freeman.mycampingmap.compose.NavGraph
 import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
-import com.freeman.mycampingmap.viewmodels.LoginViewModel
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.common.api.ApiException
+import com.freeman.mycampingmap.viewmodels.MainViewModel
 
 class MainActivity : BaseActivity() {
 
     val TAG = this::class.java.simpleName
 
+    private val mainViewModel by viewModels<MainViewModel>()
+//    private val mapViewModel by viewModels<MapViewModel>()
+//    private val sharedViewModel: SharedViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,10 +30,15 @@ class MainActivity : BaseActivity() {
             MyCampingMapUITheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     val navController = rememberNavController()
-                    NavGraph(navController = navController)
+                    NavGraph(mainViewModel, navController = navController)
                 }
             }
         }
+
+//        mainViewModel.syncAllCampingList.observe(this) {
+//            MyLog.d(TAG, "syncAllCampingList.observe() Size = ${it.size}")
+//            mapViewModel._syncAllCampingList.value = it
+//        }
 
     }
 
@@ -46,6 +49,6 @@ class MainActivity : BaseActivity() {
 fun GreetingPreview() {
     MyCampingMapUITheme {
         val navController = rememberNavController()
-        NavGraph(navController = navController)
+        NavGraph(viewModel = viewModel(), navController = navController)
     }
 }

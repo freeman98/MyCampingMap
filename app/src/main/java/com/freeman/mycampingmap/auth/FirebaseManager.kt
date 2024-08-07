@@ -12,7 +12,6 @@ import com.freeman.mycampingmap.data.CampingDataUtil.createCampingSiteData
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.db.LoginType
 import com.freeman.mycampingmap.db.User
-import com.freeman.mycampingmap.db.UserDao
 import com.freeman.mycampingmap.db.UserFactory.createUser
 import com.freeman.mycampingmap.utils.MyLog
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
@@ -24,7 +23,6 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -148,11 +146,11 @@ object FirebaseManager {
 
     fun addFirebaseCampingSite(user: User, place: Place) {
         //파이어스토어 데이터베이스에 저장.
-        MyLog.d(TAG, "addFirebaseCampingSite() user = $user")
+//        MyLog.d(TAG, "addFirebaseCampingSite() user = $user")
 
         // 사용자 정보를 User 객체로 생성
         val campingSite = createCampingSiteData(place)
-        MyLog.d(TAG, "addFirebaseCampingSite() = $campingSite")
+//        MyLog.d(TAG, "addFirebaseCampingSite() = $campingSite")
 
         val db = FirebaseFirestore.getInstance()
         db.collection("users").document(user.uid)
@@ -213,7 +211,7 @@ object FirebaseManager {
         }
     }
 
-    suspend fun getAllFirebaseCampingSites(): List<CampingSite> {
+    suspend fun asyncAllFirebaseCampingSites(): List<CampingSite> {
         return suspendCoroutine { continuation ->
             val uid = FirebaseAuth.getInstance().currentUser?.uid
             if (uid != null) {
@@ -242,7 +240,7 @@ object FirebaseManager {
     fun firebaseAuthWithGoogle(
         idToken: String,
         saveUserData: Boolean = false,
-        coroutineScope: CoroutineScope,
+//        coroutineScope: CoroutineScope,
         onComplete: (Boolean, String) -> Unit
     ) {
         // 파이어베이스 구글 메일 인증
@@ -259,7 +257,7 @@ object FirebaseManager {
                     if (saveUserData) {
                         MyLog.d("task.result?.user = ${task.result?.user?.uid}")
                         val u = createUser(
-                            coroutinScope = coroutineScope,
+//                            coroutinScope = coroutineScope,
                             uid = uid ?: "",
                             email = email ?: "",
                             username = displayName ?: "",
@@ -317,7 +315,7 @@ object FirebaseManager {
 
     fun firebaseLoginGoogle(
         activityResult: ActivityResult,
-        coroutionScope: CoroutineScope,
+//        coroutionScope: CoroutineScope,
         saveUserData: Boolean = false,
         onComplete: (Boolean, String) -> Unit
     ) {
@@ -337,8 +335,10 @@ object FirebaseManager {
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "signInWithCredential:success")
                             val user = FirebaseAuth.getInstance().currentUser
-                            updateUser(idToken, user, coroutionScope, saveUserData) { success, message ->
-                                if (success) onComplete(true, "")
+//                            updateUser(idToken, user, coroutionScope, saveUserData) { success, message ->
+                            updateUser(idToken, user, saveUserData) { success, message ->
+
+                            if (success) onComplete(true, "")
                                 else onComplete(false, "")
                             }
 
@@ -384,7 +384,7 @@ object FirebaseManager {
     private fun updateUser(
         idToken: String,
         user: FirebaseUser?,
-        coroutionScope: CoroutineScope,
+//        coroutionScope: CoroutineScope,
         saveUserData:Boolean = false,
         onComplete: (Boolean, String) -> Unit
     ) {
@@ -396,7 +396,7 @@ object FirebaseManager {
         firebaseAuthWithGoogle(
             idToken,
             saveUserData,
-            coroutionScope
+//            coroutionScope
         ) { success, message ->
             Log.d(TAG, "loginGoogle() firebaseAuthWithGoogle : $success")
             if (success) onComplete(true, "")

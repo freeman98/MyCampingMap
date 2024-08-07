@@ -44,7 +44,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -58,12 +57,12 @@ import com.freeman.mycampingmap.viewmodels.LoginViewModel
 
 @Composable
 fun LoginScreen(
-    navController: NavHostController, viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel = viewModel(),
+    navController: NavHostController
 ) {
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-//    var isLoading by remember { mutableStateOf(false) }
     val isLoading by viewModel.isLoading.observeAsState(false)
 
     Column(
@@ -84,15 +83,15 @@ fun LoginScreen(
         } else {
             //로그인
             LoginScreenButton(
+                viewModel = viewModel,
                 email = email,
                 password = password,
-                viewModel = viewModel,
                 navController = navController
             )
             Spacer(modifier = Modifier.height(8.dp))
             LoginScreenTextButton(navController = navController)
             Spacer(modifier = Modifier.height(8.dp))
-            SNSLoginContent(navController)
+            SNSLoginContent(viewModel = viewModel, navController = navController)
         }   //isLoading
 
     }
@@ -102,7 +101,7 @@ fun LoginScreen(
 fun SNSLoginContent(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel
 ) {
     val context = LocalContext.current
     Row(modifier = modifier) {
@@ -122,17 +121,15 @@ fun SNSLoginContent(
                 viewModel.loginFacebook()
 
             })
-
     }
 }
 
 @Composable
 fun googleRememberLauncherForActivityResult(
     navController: NavHostController,
-    viewModel: LoginViewModel = viewModel(),
 ): ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult> {
     //구글 로그인
-    val coroutionScope = viewModel.viewModelScope
+//    val coroutionScope = viewModel.viewModelScope
     val context = LocalContext.current
     return rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -142,7 +139,7 @@ fun googleRememberLauncherForActivityResult(
 
             firebaseLoginGoogle(
                 activityResult = activityResult,
-                coroutionScope = coroutionScope,
+//                coroutionScope = coroutionScope,
                 saveUserData = true,
             ) { success, message ->
                 if (success) {
@@ -151,17 +148,6 @@ fun googleRememberLauncherForActivityResult(
                     }
                 }
             }
-//            viewModel.loginGoogle(
-//                activityResult = activityResult,
-//                coroutionScope = coroutionScope,
-//                saveUserData = true
-//            ) { success, message ->
-//                if (success) {
-//                    navController.navigate(Screen.Home.route) {
-//                        popUpTo(Screen.Login.route) { inclusive = true }
-//                    }
-//                }
-//            }
         }else{
             //구글 로그인 실패 하면 앱종료
             (context as? Activity)?.finishAffinity()
@@ -187,7 +173,7 @@ fun SNSLoginIconButton(resId: Int, onClick: () -> Unit) {
 @Preview
 @Composable
 fun SNSLoginContentPreview() {
-    SNSLoginContent(navController = rememberNavController(), modifier = Modifier)
+    SNSLoginContent(viewModel = viewModel(), navController = rememberNavController(), modifier = Modifier)
 }
 
 @Composable
@@ -203,15 +189,18 @@ fun LoginScreenTextButton(navController: NavHostController) {
 
 @Composable
 fun LoginScreenButton(
+    viewModel: LoginViewModel,
     email: String,
     password: String,
-    viewModel: LoginViewModel,
     navController: NavHostController
 ) {
-    // 로그인 버튼
-    Button(onClick = {
+
+    val onCLickLogin = onClickLogin@{
         // 로그인 처리 로직
-        if (!validateAndLoginCheck(email, password)) return@Button
+        if (!validateAndLoginCheck(email = email, password = password)) {
+            return@onClickLogin
+        }
+
         viewModel.emailLogin(
             email = email, password = password, saveUserData = true
         ) { success, message ->
@@ -222,7 +211,10 @@ fun LoginScreenButton(
             }
             Toast.makeText(MyApplication.context, message, Toast.LENGTH_SHORT).show()
         }
-    }) {
+    }
+
+    // 로그인 버튼
+    Button(onClick = onCLickLogin) {
         Text(text = "로그인")
     }
 }

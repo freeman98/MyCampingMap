@@ -23,6 +23,7 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieAnimatable
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.freeman.mycampingmap.R
+import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.MainViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -37,7 +38,7 @@ fun SplashScreen(
 //    Log.d("Splash", "SplashScreen() ")
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.splash_animation))
     val lottieAnimatable = rememberLottieAnimatable()
-    val user by viewModel.user.observeAsState()
+    val user by viewModel.loginUser.observeAsState()
 
     LaunchedEffect(composition) {
         lottieAnimatable.animate(
@@ -52,8 +53,10 @@ fun SplashScreen(
         permission = Manifest.permission.ACCESS_FINE_LOCATION
     )
     val launcher = googleRememberLauncherForActivityResult(navController)
-//    Log.d("Splash", "user : $user")
+
     LaunchedEffect(user) {
+        viewModel.getDBUser()
+        MyLog.d("Splash", "user = $user")
         if (locationPermissionState.status.isGranted) {
             // 위치 권한이 허용 일때. - 로그인 처리 로직
             user?.let {

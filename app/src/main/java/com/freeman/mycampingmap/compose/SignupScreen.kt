@@ -29,8 +29,8 @@ import com.freeman.mycampingmap.viewmodels.MainViewModel
 
 @Composable
 fun SignupScreen(
+    viewModel: MainViewModel = viewModel(),
     navController: NavHostController,
-    viewModel: MainViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -61,7 +61,9 @@ fun SignupScreen(
         } else {
             // 로딩이 아닐 때
             // 회원가입 버튼
-            SignupButton(email = email, password = password,
+            SignupButton(
+                viewModel = viewModel,
+                email = email, password = password,
                 confirmPassword = confirmPassword,
                 navController = navController,
                 isLoading = { isLoading = it })
@@ -88,9 +90,21 @@ fun SignupGotoLginScreenTextButton(navController: NavHostController) {
 fun SignupButton(
     email: String, password: String, confirmPassword: String, isLoading: (Boolean) -> Unit,
     navController: NavHostController,
-    viewModel: MainViewModel = viewModel()
+    viewModel: MainViewModel
 ) {
     // 회원가입 버튼
+
+    val onComplete = { success: Boolean, message: String ->
+        if (success) {
+            // 회원가입 성공
+            navController.navigate(Screen.Home.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
+        }
+        isLoading(false)   // 로딩 상태 해제
+        Toast.makeText(MyApplication.context, message, Toast.LENGTH_SHORT).show()
+    }
+
     Button(onClick = {
         // 회원가입 처리 로직
         if (!validateAndLoginCheck(email, password, confirmPassword)) return@Button
@@ -99,17 +113,9 @@ fun SignupButton(
         // 회원가입 API 호출
         viewModel.emailRegisterUser(
             email = email,
-            password = password
-        ) { success, message ->
-            if (success) {
-                // 회원가입 성공
-                navController.navigate(Screen.Home.route) {
-                    popUpTo(Screen.Splash.route) { inclusive = true }
-                }
-            }
-            isLoading(false)   // 로딩 상태 해제
-            Toast.makeText(MyApplication.context, message, Toast.LENGTH_SHORT).show()
-        }
+            password = password,
+            onComplete = onComplete
+        )
     }) {
         Text(text = "회원가입")
     }

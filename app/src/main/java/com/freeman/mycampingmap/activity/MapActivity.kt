@@ -8,7 +8,6 @@ import androidx.activity.viewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.freeman.mycampingmap.compose.MapScreen
 import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 import com.freeman.mycampingmap.utils.MyLog
@@ -26,9 +25,7 @@ class MapActivity : BaseActivity() {
 
         setContent {
             MyCampingMapUITheme {
-                val viewModel: MapViewModel = viewModel(
-                    factory = MapViewModelFactory()
-                )
+//                val viewModel: MapViewModel = viewModel
                 MapScreen(viewModel) {
                     //앱 종료
                     MyLog.d(TAG, "MapActivity onBackPressed()")
@@ -46,6 +43,12 @@ class MapActivity : BaseActivity() {
                 viewModel.setSelectCampingSite(campingSite)
             }
         })
+
+        // MapViewModel의 syncAllCampingList를 관찰하여 UI를 업데이트
+        viewModel.syncAllCampingList.observe(this) { campingSites ->
+            // UI를 업데이트하는 로직을 여기에 작성
+            MyLog.d("MapActivity", "Received camping sites: ${campingSites.size}")
+        }
 
     }
 

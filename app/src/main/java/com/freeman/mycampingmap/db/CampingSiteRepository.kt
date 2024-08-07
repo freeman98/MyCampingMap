@@ -1,30 +1,56 @@
 package com.freeman.mycampingmap.db
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class CampingSiteRepository(private val campingSiteDao: CampingSiteDao) {
-//    val allCampingSites: List<CampingSite> = campingSiteDao.getAllCampingSites()
 
-    suspend fun allCampingList(): List<CampingSite> {
-        return withContext(Dispatchers.IO) {
-            campingSiteDao.getAllCampingSites()
+    val allCampingSites = MutableLiveData<List<CampingSite>>()
+
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+
+    suspend fun getAllCampingSites(): List<CampingSite> {
+        return asyncAllCampingList().await()
+    }
+
+    fun allCampingList() {
+        coroutineScope.launch(Dispatchers.Main) {
+            allCampingSites.value = asyncAllCampingList().await()
         }
     }
 
-    suspend fun insertAll(campingSites: List<CampingSite>) {
-        campingSiteDao.insertAll(campingSites)
+    private fun asyncAllCampingList(): Deferred<List<CampingSite>> =
+        coroutineScope.async(Dispatchers.IO) {
+            return@async campingSiteDao.getAllCampingSites()
+        }
+
+    fun insertAll(campingSites: List<CampingSite>) {
+        coroutineScope.launch(Dispatchers.IO) {
+            campingSiteDao.insertAll(campingSites)
+        }
     }
 
-    suspend fun insert(campingSite: CampingSite) {
-        campingSiteDao.insert(campingSite)
+    fun insert(campingSite: CampingSite) {
+        coroutineScope.launch(Dispatchers.IO) {
+            campingSiteDao.insert(campingSite)
+        }
     }
 
-    suspend fun delete(campingSite: CampingSite) {
-        campingSiteDao.delete(campingSite)
+    fun delete(campingSite: CampingSite) {
+        coroutineScope.launch(Dispatchers.IO) {
+            campingSiteDao.delete(campingSite)
+        }
     }
 
-    suspend fun allDelete() {
-        campingSiteDao.allDelete()
+    fun allDelete() {
+        coroutineScope.launch(Dispatchers.IO) {
+            campingSiteDao.allDelete()
+        }
     }
 }

@@ -19,12 +19,14 @@ package com.freeman.mycampingmap.compose
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.freeman.mycampingmap.viewmodels.MainViewModel
 
 sealed class Screen(
     val route: String,
@@ -61,19 +63,20 @@ sealed class Screen(
 }
 
 @Composable
-fun NavGraph(navController: NavHostController) {
+fun NavGraph(viewModel: MainViewModel, navController: NavHostController) {
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
+
         composable(Screen.Splash.route) {
-            SplashScreen(navController)
+            SplashScreen(viewModel = viewModel, navController = navController)
         }
         composable(Screen.Login.route) {
-            LoginScreen(navController)
+            LoginScreen(navController = navController)
         }
         composable(Screen.Signup.route) {
-            SignupScreen(navController)
+            SignupScreen(viewModel = viewModel, navController = navController)
         }
         composable(Screen.Home.route) {
-            MainScreen(navController)
+            MainScreen(viewModel = viewModel, navController = navController)
         }
     }
 }
@@ -81,5 +84,5 @@ fun NavGraph(navController: NavHostController) {
 @Preview
 @Composable
 fun NavGraphPreview() {
-    NavGraph(navController = NavHostController(LocalContext.current))
+    NavGraph( viewModel = viewModel(), navController = NavHostController(LocalContext.current))
 }

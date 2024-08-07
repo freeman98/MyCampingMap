@@ -1,5 +1,6 @@
 package com.freeman.mycampingmap.db
 
+import androidx.annotation.NonNull
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.freeman.mycampingmap.MyApplication
@@ -11,7 +12,9 @@ import kotlinx.coroutines.launch
 
 @Entity(tableName = "user_table")
 data class User(
-    @PrimaryKey val uid: String,
+    @PrimaryKey
+    @NonNull
+    val uid: String,
     val email: String,
     val password: String = "",
     val username: String = "",
@@ -26,8 +29,10 @@ enum class LoginType {
 }
 
 object UserFactory {
+
+    var coroutineScope = CoroutineScope(Dispatchers.IO)
+
     fun createUser(
-        coroutinScope: CoroutineScope,
         uid: String,
         email: String,
         password: String = "",
@@ -46,7 +51,7 @@ object UserFactory {
             loginType = loginType
         )
 //        userDao.insertUser(user)
-        coroutinScope.launch(Dispatchers.IO) {
+        coroutineScope.launch(Dispatchers.IO) {
             UserDatabase.getDatabase(MyApplication.context).userDao().insertUser(user)
 //            userDao.insertUser(user)
         }

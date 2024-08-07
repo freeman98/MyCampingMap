@@ -96,6 +96,7 @@ import com.freeman.mycampingmap.R
 import com.freeman.mycampingmap.activity.MapActivity
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
+import com.freeman.mycampingmap.utils.MyLocation.formatDistance
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.MainViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -103,8 +104,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen(
-    navController: NavHostController,
-    viewModel: MainViewModel = viewModel()
+    viewModel: MainViewModel,
+    navController: NavHostController
 ) {
     val context = LocalContext.current
     val scaffoldState = rememberScaffoldState()
@@ -117,7 +118,7 @@ fun MainScreen(
     //뒤로가기 버튼 이벤트 헨들러.
     MainScreenBackHandler(scaffoldState)
     //지도 액티비티 Result 런처
-    val launcher = mapRememberLauncherForActivityResult()
+    val launcher = mapRememberLauncherForActivityResult(viewModel = viewModel)
 
     Scaffold(
         //상단바
@@ -134,7 +135,9 @@ fun MainScreen(
         },
         //사이드 메뉴
         drawerContent = {
+            //사이드 메뉴 컨텐츠
             DrawerSideContent(
+                viewModel = viewModel,
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.primaryContainer)
@@ -150,7 +153,7 @@ fun MainScreen(
         scaffoldState = scaffoldState,          //스캐폴드 상태
         drawerShape = customDrawerShape(topPadding),      //드로어 모양
         drawerElevation = 30.dp,                //드로어 그림자
-        floatingActionButton = {
+        floatingActionButton = {                //플로팅 액션 버튼
             FloatingActionButton(onClick = {
                 MyLog.d("MainScreen() FloatingActionButton()")
                 gotoMapActivity(context, launcher)
@@ -169,15 +172,16 @@ fun MainScreen(
             contentAlignment = Alignment.Center
         ) {
             //캠핑장 리스트
-            CampingSiteListView()
+            CampingSiteListView(viewModel = viewModel)
         }
     }
 }
 
 @Composable
 fun mapRememberLauncherForActivityResult(
-    viewModel: MainViewModel = viewModel()
+    viewModel: MainViewModel
 ): ManagedActivityResultLauncher<Intent, ActivityResult> {
+    //지도 액티비티 Result 런처
     return rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -248,11 +252,11 @@ fun customDrawerShape(topPadding: Dp) = object : Shape {
 fun DrawerSideContent(
     modifier: Modifier = Modifier,
     navController: NavHostController,
-    viewModel: MainViewModel = viewModel(),
+    viewModel: MainViewModel,
     onClickClose: () -> Unit
 ) {
     // DrawerContent 사이드 메뉴
-    val user by viewModel.user.observeAsState()
+    val user by viewModel.loginUser.observeAsState()
     val typography = MaterialTheme.typography
 
     val paddingMdifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
@@ -289,7 +293,7 @@ fun DrawerSideContent(
         Text(modifier = paddingMdifier, text = "MENU 16")
         Divider(modifier = paddingMdifier, color = Color.Gray, thickness = 1.dp)
         //로그아웃
-        DrawerSideMenuLogout(navController)
+        DrawerSideMenuLogout(navController, viewModel)
         Spacer(modifier = Modifier.height(10.dp))
     }
 }
@@ -310,11 +314,11 @@ fun DrawerSideMenuCloseButton(modifier: Modifier = Modifier, onClick: () -> Unit
 @Preview
 @Composable
 fun DrawerSideContentPreview() {
-    DrawerSideContent(navController = NavHostController(LocalContext.current), onClickClose = {})
+    DrawerSideContent(viewModel = viewModel(), navController = NavHostController(LocalContext.current), onClickClose = {})
 }
 
 @Composable
-fun DrawerSideMenuLogout(navController: NavHostController, viewModel: MainViewModel = viewModel()) {
+fun DrawerSideMenuLogout(navController: NavHostController, viewModel: MainViewModel) {
     //로그아웃
     var showDialog by remember { mutableStateOf(false) }
 
@@ -419,7 +423,7 @@ fun gotoMapActivity(
 @Composable
 fun CampingSiteListView(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel = viewModel()
+    viewModel: MainViewModel
 ) {
     Log.d(viewModel.TAG, "CampDataListView()")
     val context = LocalContext.current
@@ -431,8 +435,13 @@ fun CampingSiteListView(
         viewModel.syncCampingSites()
     }
 
-    Log.d(viewModel.TAG, "CampDataListView() syncAllCampingList.size = ${syncAllCampingList.size}")
+    if(syncAllCampingList.isEmpty()) return
+    LaunchedEffect(syncAllCampingList) {
+        //내킴팽장 정보에 현재 위치와 거리 정보 추가.
+        viewModel.distanceFromCurrentLocation()
+    }
 
+    Log.d(viewModel.TAG, "CampDataListView() syncAllCampingList.size = ${syncAllCampingList.size}")
     //캠핑장 리스트 그룹화.
     val groupedItems =
         syncAllCampingList.groupBy { it.address.substringAfter(' ').substringBefore(' ') }
@@ -463,6 +472,7 @@ fun CampingSiteListView(
                     .fillMaxSize()
                     .padding(vertical = 14.dp /*상하 패딩.*/)
             ) {
+
                 groupedItems.forEach { (manufacturer, models) ->
                     //그룹 헤더
                     stickyHeader {
@@ -484,8 +494,7 @@ fun CampingSiteListView(
                             onCardDeleteClick = onCardDeleteClick
                         )   //CampDataViewCard
                     }   //items
-
-                }
+                }   //groupedItems.forEach
             }   //LazyColumn
         }   //if (isLoading)
     }
@@ -514,7 +523,7 @@ fun CampDataViewCard(
         modifier = Modifier
             .clickable(onClick = { onCardClick(capingSite) }) //카드 클릭 이벤트.
             .fillMaxWidth()     //가로 전체 화면 다쓴다.
-            .padding(10.dp),    //카드간 간격.
+            .padding(5.dp),    //카드간 간격.
         shape = RoundedCornerShape(12.dp),
         elevation = elevation   //그림자 영역 지정.
     ) {
@@ -522,17 +531,22 @@ fun CampDataViewCard(
             /*
             - horizontalArrangement Arrangement = 요소를 어떤식으로 배열할지 설정, Start, End, Center 만 존재.
              */
-            modifier = Modifier.padding(10.dp), //패징값.
+            modifier = Modifier.padding(5.dp), //패징값.
             verticalAlignment = Alignment.Bottom, //세로 정렬 설정.
             horizontalArrangement = Arrangement.spacedBy(10.dp) //가로 간격 설정.
 //            horizontalArrangement = Arrangement.End
         ) {
             ProfileImg(
-                modifier = Modifier.align(Alignment.Top),
-                imgUrl = "https://randomuser.me/api/portraits/women/11.jpg"
+                modifier = Modifier
+                    .align(Alignment.Top)
+                    .size(80.dp),
+//                imgUrl = "https://randomuser.me/api/portraits/women/11.jpg"
+                imgUrl = null
             )
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .align(Alignment.Top)
             ) {
                 Text(
                     text = capingSite.name,
@@ -542,7 +556,9 @@ fun CampDataViewCard(
                     text = capingSite.address,
                     style = typography.titleMedium
                 )
+                Text(text = "거리 : ${formatDistance(capingSite.distanceFromCurrentLocation)}km")
             }
+            //카드 삭제 버튼
             CardDeleteImageButton(
                 capingSite,
                 modifier = Modifier.align(Alignment.Top),
@@ -628,8 +644,9 @@ fun ProfileImg(modifier: Modifier = Modifier, imgUrl: String?) {
 
     //이미지 모디파이어
     val imageModifier = modifier
-        .size(50.dp, 50.dp)
+        .size(60.dp, 60.dp)
         .clip(RoundedCornerShape(10.dp)) //이미지 모서리 라운드
+        .then(modifier)
 //        .clip(CircleShape)  //이미지 원형
 
 
@@ -671,6 +688,6 @@ fun ProfileImg(modifier: Modifier = Modifier, imgUrl: String?) {
 @Composable
 fun MainScreenPreview() {
     MyCampingMapUITheme {
-        MainScreen(navController = NavHostController(LocalContext.current))
+        MainScreen(viewModel(), NavHostController(LocalContext.current))
     }
 }

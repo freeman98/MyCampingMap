@@ -4,23 +4,26 @@ import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.freeman.mycampingmap.MyApplication
 import com.freeman.mycampingmap.MyApplication.Companion.context
 import com.freeman.mycampingmap.auth.FirebaseManager.deleteFirebaseCampingSite
 import com.freeman.mycampingmap.auth.FirebaseManager.emailSignUp
 import com.freeman.mycampingmap.auth.FirebaseManager.firebaseAuthTokenLogin
 import com.freeman.mycampingmap.auth.FirebaseManager.firebaseLoginGoogleInit
-import com.freeman.mycampingmap.auth.FirebaseManager.getAllFirebaseCampingSites
+import com.freeman.mycampingmap.auth.FirebaseManager.asyncAllFirebaseCampingSites
 import com.freeman.mycampingmap.data.CampingDataUtil
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.db.LoginType
 import com.freeman.mycampingmap.db.User
+import com.freeman.mycampingmap.utils.MyLocation
+import com.freeman.mycampingmap.utils.MyLocation.parseLatLng
+import com.freeman.mycampingmap.utils.MyLocation.requestLocation
 import com.freeman.mycampingmap.utils.MyLog
-import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -30,26 +33,25 @@ class MainViewModel : BaseViewModel() {
 
     val TAG = this::class.java.simpleName
 
-    //파이어베이스 캠핑장 리스트 정보
-//    private val _firebaseCampingSites = MutableLiveData<List<CampingSite>>()
-//    val firebaseCampingSites: LiveData<List<CampingSite>> = _firebaseCampingSites
-
-//    private val _dbAllCampingSites = MutableLiveData<List<CampingSite>>()
-//    val dbAllCampingSites: LiveData<List<CampingSite>> = _dbAllCampingSites
-
     // 캠핑장 삭제 플레그 - 삭제중에 데이터 싱크가 일어나지 않게 하기 위해.
     var isDeleting: Boolean = false
-    // 이전에 로그인 한 계정이 있는지 확인
-    private fun getLastSignedInAccount() = GoogleSignIn.getLastSignedInAccount(context)
 
-    fun loginTypeCheckUser(user: User,
-                           launcher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>,
-                           onComplete: (Boolean, String) -> Unit) {
-        MyLog.d(TAG, "loginTypeCheckUser() = $user")
+    val loginUser: MutableLiveData<User?> = userRepository.userData
+
+    fun getDBUser() {
+        //db에 저장된 사용자 정보 가져오기.
+        userRepository.getUser()
+    }
+
+    fun loginTypeCheckUser(
+        user: User,
+        launcher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>,
+        onComplete: (Boolean, String) -> Unit
+    ) {
+//        MyLog.d(TAG, "loginTypeCheckUser() = $user")
 
         viewModelScope.launch {
             //db에 저장된 사용자 정보를 이용하여 로그인 신청.
-            MyLog.d(TAG, "checkUser() = $user")
             when (user.loginType) {
                 LoginType.EMAIL -> { /* 이메일 로그인 */
                     emailLogin(
@@ -101,15 +103,56 @@ class MainViewModel : BaseViewModel() {
         MyLog.d(TAG, "getDBCampingSites()")
         if (isDeleting) return
         _isLoading.value = true
+
         viewModelScope.launch(Dispatchers.IO) {
-            val dbAllCampingSiteSelect = async { dbAllCampingSiteSelect() }
-            val localSites = dbAllCampingSiteSelect.await()
+            val dbAllSites = async { asyncDBAllCampingSiteSelect() }
+            val localSites = dbAllSites.await()
             MyLog.d(TAG, "getDBCampingSites() localSites.size : ${localSites.size}")
+            //채널에 캠핑장 정보 전달.
+            channelCampingSites.send(localSites)
+
             withContext(Dispatchers.Main) {
                 _syncAllCampingList.value = localSites
             }
         }
+
         _isLoading.value = false
+    }
+
+    private val channelCampingSites = Channel<List<CampingSite>>()
+
+    fun distanceFromCurrentLocation() {
+        //캠핑장 리스트에 내 위치와 거리 정보 추가.
+        viewModelScope.launch {
+//            repeat(0) {
+            val campingSites = channelCampingSites.receive()
+
+            if (campingSites.isEmpty()) return@launch
+            MyLog.d(TAG, "distanceFromCurrentLocation() campingSites.size : ${campingSites.size}")
+
+            requestLocation(onResult = { isSuccess, latitude, longitude ->
+                MyLog.d(TAG, "distanceFromCurrentLocation() isSuccess : $isSuccess, latitude : $latitude, longitude : $longitude")
+
+                if (!isSuccess) return@requestLocation
+                campingSites.forEach { campingSite ->
+                    parseLatLng(campingSite.location).let { latLng ->
+                        if (latLng == null) return@forEach
+                        campingSite.distanceFromCurrentLocation =
+                            MyLocation.distanceBetween(
+                                latitude.toDouble(),
+                                longitude.toDouble(),
+                                latLng.latitude,
+                                latLng.longitude
+                            )
+//                        MyLog.d(TAG, "campingSite.distanceFromCurrentLocation : $campingSite")
+                    }
+                }
+                _syncAllCampingList.value = emptyList()
+                _syncAllCampingList.value = campingSites
+            })
+//            }
+        }
+
     }
 
     fun syncCampingSites() {
@@ -118,8 +161,10 @@ class MainViewModel : BaseViewModel() {
         _isLoading.value = true
         MyLog.d(TAG, "syncCampingSites()")
         viewModelScope.launch(Dispatchers.IO) {
-            val dbAllCampingSiteSelect = async { dbAllCampingSiteSelect() }
-            val fierbaseCampingSites = async { getAllFirebaseCampingSites() }
+
+            val dbAllCampingSiteSelect = async { asyncDBAllCampingSiteSelect() }
+            val fierbaseCampingSites = async { asyncAllFirebaseCampingSites() }
+
             val localSites = dbAllCampingSiteSelect.await()
             val remoteSites = fierbaseCampingSites.await()
             MyLog.d(TAG, "syncCampingSites() localSites.size : ${localSites.size}")
@@ -130,8 +175,11 @@ class MainViewModel : BaseViewModel() {
 
             val syncCampingSites = CampingDataUtil.syncCampingSites(
                 localSites, remoteSites,
-                campingSiteRepository, this
+                campingSiteRepository
             )
+            //채널에 캠핑장 정보 전달.
+            channelCampingSites.send(syncCampingSites)
+
             withContext(Dispatchers.Main) {
                 MyLog.d(TAG, "syncCampingSites() syncCampingSites.size : ${syncCampingSites.size}")
                 _syncAllCampingList.value = syncCampingSites
@@ -172,7 +220,7 @@ class MainViewModel : BaseViewModel() {
         MyLog.d(TAG, "logout()")
         //db 로그아웃
         viewModelScope.launch(Dispatchers.IO) {
-            userDao.deleteUser()    //유져 db정보 삭제
+            userRepository.deleteUser()    //유져 db정보 삭제
             dbAllCampingSite()
             //파이어베이스 로그아웃
             FirebaseAuth.getInstance().signOut()
