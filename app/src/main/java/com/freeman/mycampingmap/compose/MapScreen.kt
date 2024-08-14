@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -141,7 +142,7 @@ fun MyLocationButtonPreview() {
 fun SearchBox(
     viewModel: MapViewModel,
     onSearch: (String) -> Unit,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
 ) {
     //상단 가로 정력 입력창 과 검색 버튼
     Log.d(viewModel.TAG, "SearchBox()")
@@ -230,7 +231,7 @@ fun SearchBox(
 fun SearchListView(
     viewModel: MapViewModel,
     modifier: Modifier = Modifier,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
 ) {
     Log.d(viewModel.TAG, "serchListView()")
     //지도에 표시될 Place list.
@@ -298,6 +299,7 @@ fun SearchListView(
         ) {
             items(placesList) { place ->
                 SerchListViewCard(
+                    viewModel,
                     place,
                     onCardClick = { selectPlace ->
                         //카드 클릭 이벤트.
@@ -318,15 +320,23 @@ fun SearchListView(
 
 @Composable
 fun SerchListViewCard(
+    viewModel: MapViewModel,
     place: Place,
     onCardClick: (Place) -> Unit,
-    onClickCampingSite: (Place) -> Unit
+    onClickCampingSite: (Place) -> Unit,
 ) {
 //    MyLog.d(TAG, "SerchListViewCard() $place")
     val typography = MaterialTheme.typography
     val elevation = CardDefaults.cardElevation(
         defaultElevation = 0.dp
     )
+    var isFavorite by remember { mutableStateOf(false) }
+    val onClickFavoritesCampingSite = {
+        //검색한 캠핑장 즐겨찾기 클릭 이벤트.
+        MyLog.d("SerchListViewCard() onClickFavoritesCampingSite()")
+    }
+
+    isFavorite = viewModel.checkFavoriteCampingSite(place)
 
     Card(
         modifier = Modifier
@@ -341,8 +351,24 @@ fun SerchListViewCard(
              */
             modifier = Modifier.padding(10.dp) //패징값.
         ) {
-            place.name?.let {
-                Text(text = it, style = typography.titleLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                place.name?.let {
+                    Text(
+                        modifier = Modifier.weight(1f),
+                        text = it, style = typography.titleLarge
+                    )
+                }
+                IconButton(onClick = onClickFavoritesCampingSite) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = "즐겨찾기",
+                        tint = if (isFavorite) Color.Blue else Color.Gray // 활성화 시 파란색, 비활성화 시 회색
+                    )
+                }
+
             }
             place.address?.let {
                 Text(text = "- 주소 : $it", style = typography.bodyMedium)
@@ -388,6 +414,23 @@ fun SerchListViewCard(
 
 @Preview
 @Composable
+fun SerchListViewCardPreview() {
+    MyCampingMapUITheme {
+        SerchListViewCard(
+            viewModel = viewModel(),
+            place = Place.builder().setName("테스트 이름")
+                .setAddress("테스트 주소")
+                .setPhoneNumber("010-1234-5678")
+                .setRating(4.0)
+                .build(),
+            onCardClick = {},
+            onClickCampingSite = {}
+        )
+    }
+}
+
+@Preview
+@Composable
 fun SearchListViewPreview() {
     MyCampingMapUITheme {
         SearchListView(viewModel = viewModel(), onBackPressed = {})
@@ -415,8 +458,9 @@ fun MapView(viewModel: MapViewModel) {
             viewModel.getAllMyCampingSites()
         }
 
+        //리스트에서 선택한 캠핑장 이 없을경우.
         LaunchedEffect(allCampingSites) {
-            if(allCampingSites.isEmpty()) return@LaunchedEffect
+            if (allCampingSites.isEmpty()) return@LaunchedEffect
             MyLog.d("myCampingSiteListMarker() allCampingSites.size() = ${allCampingSites?.size ?: 0}")
             viewModel.myCampingSiteListMarker(allCampingSites)
         }
@@ -428,7 +472,6 @@ fun MapView(viewModel: MapViewModel) {
                 viewModel.selectCampingSiteMarker(it)
             }
         }
-
         //현재 위치가 있을경우.
         LaunchedEffect(currentLocation) {
             if (selectedCampingSite == null) {

@@ -1,6 +1,9 @@
 package com.freeman.mycampingmap.viewmodels
 
 import android.location.Location
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -17,11 +20,14 @@ import com.freeman.mycampingmap.db.UserRepository
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.BaseViewModel.LiveDataBus._selectCampingSite
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
-open class BaseViewModel : ViewModel() {
+@HiltViewModel
+open class BaseViewModel @Inject constructor() : ViewModel() {
 
     //LiveData를 이용한 이벤트 버스
     object LiveDataBus {
@@ -33,7 +39,7 @@ open class BaseViewModel : ViewModel() {
 
         //내 위치.
         val _currentMyLocation = MutableLiveData<Location?>()
-        val currentMyLocation: LiveData<Location?> get() = _currentMyLocation
+        val currentMyLocation: LiveData<Location?> = _currentMyLocation
     }
 
     var userRepository: UserRepository

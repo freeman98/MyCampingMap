@@ -435,7 +435,7 @@ fun CampingSiteListView(
         viewModel.syncCampingSites()
     }
 
-    if(syncAllCampingList.isEmpty()) return
+//    if(syncAllCampingList.isEmpty()) return
     LaunchedEffect(syncAllCampingList) {
         //내킴팽장 정보에 현재 위치와 거리 정보 추가.
         viewModel.distanceFromCurrentLocation()

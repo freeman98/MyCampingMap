@@ -13,7 +13,9 @@ import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.BaseViewModel
 import com.freeman.mycampingmap.viewmodels.MapViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MapActivity : BaseActivity() {
 
     val TAG: String = this::class.java.simpleName

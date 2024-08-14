@@ -1,8 +1,11 @@
 package com.freeman.mycampingmap.viewmodels
 
 import android.util.Log
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class LoginViewModel : BaseViewModel() {
+@HiltViewModel
+class LoginViewModel @Inject constructor(): BaseViewModel() {
 
     val TAG = this::class.java.simpleName
 

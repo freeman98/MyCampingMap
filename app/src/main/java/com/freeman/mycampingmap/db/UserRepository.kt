@@ -6,8 +6,9 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class UserRepository(private val userDao: UserDao) {
+class UserRepository @Inject constructor(private val userDao: UserDao) {
 
     val userData = MutableLiveData<User?>()
 

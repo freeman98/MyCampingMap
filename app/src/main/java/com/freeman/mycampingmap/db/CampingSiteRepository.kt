@@ -8,8 +8,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
-class CampingSiteRepository(private val campingSiteDao: CampingSiteDao) {
+class CampingSiteRepository @Inject constructor(private val campingSiteDao: CampingSiteDao) {
 
     val allCampingSites = MutableLiveData<List<CampingSite>>()
 

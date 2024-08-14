@@ -21,15 +21,17 @@ import com.freeman.mycampingmap.utils.MyLocation.parseLatLng
 import com.freeman.mycampingmap.utils.MyLocation.requestLocation
 import com.freeman.mycampingmap.utils.MyLog
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 
-//MVVM 모델 과 컴포스를 적용
-class MainViewModel : BaseViewModel() {
+@HiltViewModel
+class MainViewModel @Inject constructor(): BaseViewModel() {
 
     val TAG = this::class.java.simpleName
 

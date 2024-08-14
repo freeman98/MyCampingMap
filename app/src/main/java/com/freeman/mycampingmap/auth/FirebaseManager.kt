@@ -279,12 +279,14 @@ object FirebaseManager {
         context: Context,
         launcher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>
     ) {
+        val id = "287683711696-q7jdt8o3adrkrdan6jsgui8sg4kujvfk.apps.googleusercontent.com"
         val signInRequest = BeginSignInRequest.builder()
             .setGoogleIdTokenRequestOptions(
                 BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
                     .setSupported(true)
                     // Your server's client ID, not your Android client ID.
                     .setServerClientId(context.resources.getString(R.string.default_web_client_id))
+//                    .setServerClientId(id)
                     // Only show accounts previously used to sign in.
                     .setFilterByAuthorizedAccounts(false)
                     .build()

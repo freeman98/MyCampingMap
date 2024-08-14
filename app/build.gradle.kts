@@ -4,7 +4,18 @@ plugins {
     id("kotlin-parcelize")
     alias(libs.plugins.googleServices)
     id("kotlin-kapt")
+    //Hilt
+    id("dagger.hilt.android.plugin")
     kotlin("kapt")
+}
+
+kapt {
+    correctErrorTypes = true
+}
+
+//enableAggregatingTask는 Hilt annotation processors의 컴파일 시간을 줄여주고 호출이 될 때만 실행되게 만들어줍
+hilt {
+    enableAggregatingTask = true
 }
 
 android {
@@ -54,6 +65,11 @@ android {
 }
 
 dependencies {
+    //Hilt
+    val hiltVersion by extra("2.50")
+    implementation ("com.google.dagger:hilt-android:$hiltVersion")
+    kapt ("com.google.dagger:hilt-android-compiler:$hiltVersion")
+
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation (libs.ui)
     implementation (libs.ui.tooling.preview)

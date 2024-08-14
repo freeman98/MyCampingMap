@@ -13,7 +13,9 @@ import androidx.navigation.compose.rememberNavController
 import com.freeman.mycampingmap.compose.NavGraph
 import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 import com.freeman.mycampingmap.viewmodels.MainViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : BaseActivity() {
 
     val TAG = this::class.java.simpleName

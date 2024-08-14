@@ -35,10 +35,13 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
 import com.google.android.libraries.places.api.net.SearchNearbyRequest
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 import kotlin.math.pow
 
-class MapViewModel : BaseViewModel() {
+@HiltViewModel
+class MapViewModel @Inject constructor(): BaseViewModel() {
 
 
     val TAG: String = MapViewModel::class.java.simpleName
@@ -455,8 +458,6 @@ class MapViewModel : BaseViewModel() {
             )
 
             _googleMap.value?.addMarker(markerOption)?.let { marker ->
-//                marker.tag = place
-//                map[marker] = place
                 marker.showInfoWindow() //마커 클릭 시 나오는 말풍선
                 gotoLatLng(marker)
             }
@@ -493,6 +494,20 @@ class MapViewModel : BaseViewModel() {
                 }
             }
         }   //forEach
+    }
+
+    fun checkFavoriteCampingSite(place: Place): Boolean {
+        //즐겨찾기 캠핑장 체크.
+        MyLog.d(TAG, "checkFavoriteCampingSite() placeId = ${place.id}")
+        var isFavorite = false
+        allCampingSites.value?.forEach {
+            if (it.id == place.id) {
+                isFavorite = true
+                return@forEach
+            }
+        }
+        MyLog.d(TAG, "checkFavoriteCampingSite() isFavorite = $isFavorite")
+        return isFavorite
     }
 
 }
