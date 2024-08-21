@@ -100,6 +100,7 @@ import com.freeman.mycampingmap.utils.MyLocation.formatDistance
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.MainViewModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -258,6 +259,7 @@ fun DrawerSideContent(
     // DrawerContent 사이드 메뉴
     val user by viewModel.loginUser.observeAsState()
     val typography = MaterialTheme.typography
+    viewModel.getDBUser()
 
     val paddingMdifier = Modifier.padding(top = 10.dp, bottom = 10.dp)
     val scrollState = rememberScrollState()
@@ -322,19 +324,22 @@ fun DrawerSideMenuLogout(navController: NavHostController, viewModel: MainViewMo
     //로그아웃
     var showDialog by remember { mutableStateOf(false) }
 
+    val onConfirm = { onConfirm: Boolean ->
+        MyLog.d("MainScreen", "SideMenuLogout() logout()")
+        showDialog = false
+        if (onConfirm) {
+            viewModel.logout()
+            navController.navigate(Screen.Splash.route) {
+                popUpTo(Screen.Home.route) { inclusive = true }
+            }
+        }
+    }
+
     if (showDialog) {
         LogoutDialog(
             onDismiss = { showDialog = false },
-            onConfirm = { onConfirm ->
-                MyLog.d("MainScreen", "SideMenuLogout() logout()")
-                showDialog = false
-                if (onConfirm) {
-                    viewModel.logout()
-                    navController.navigate(Screen.Splash.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
-                    }
-                }
-            })
+            onConfirm = onConfirm
+        )
     }
 
     TextButton(onClick = { showDialog = true }) {

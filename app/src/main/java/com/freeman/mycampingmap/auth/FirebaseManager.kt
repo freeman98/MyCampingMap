@@ -6,86 +6,28 @@ import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
-import com.freeman.mycampingmap.MyApplication
-import com.freeman.mycampingmap.R
-import com.freeman.mycampingmap.data.CampingDataUtil.createCampingSiteData
+import com.freeman.mycampingmap.data.CampingDataUtil
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.db.LoginType
 import com.freeman.mycampingmap.db.User
 import com.freeman.mycampingmap.db.UserFactory.createUser
 import com.freeman.mycampingmap.utils.MyLog
-import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.android.libraries.places.api.model.Place
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-object FirebaseManager {
+class FirebaseManager(
+    val context: Context,
+    private var firebaseGoogleSignIn: FirebaseGoogleSignIn
+) {
 
-    private const val TAG = "FirebaseAuthManager"
-
-    fun emailSignIn(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
-        // 파이어베이스 이메일 로그인
-        MyLog.d(TAG, "emailSignIn() : email = $email, password = $password")
-
-        FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    onResult(true, null)
-                } else {
-                    onResult(false, task.exception?.message)
-                }
-            }
-    }
-
-    fun emailSignUp(email: String, password: String, onResult: (Boolean, String) -> Unit) {
-        // 파이어베이스 이메일 회원가입
-        MyLog.d(TAG, "emailSignUp() : email = $email, password = $password")
-
-        FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    onResult(true, "회원 가입 성공.")
-                } else {
-                    //가입 실패.
-                    try {
-                        throw task.exception!!
-                    } catch (existEmail: FirebaseAuthUserCollisionException) {
-                        // 이메일이 이미 사용 중임을 사용자에게 알림
-                        onResult(false, "이 이메일 주소는 이미 사용 중입니다.")
-                    } catch (e: Exception) {
-                        // 기타 잠재적인 예외 처리
-                        onResult(false, "등록 실패")
-                    }
-                }
-            }
-    }
-
-    fun firebaseAuthTokenLogin(
-        onResult: (Boolean, String?) -> Unit
-    ) {
-        // 파이어베이스 인증 토큰 로그인
-        MyLog.d(TAG, "firebaseAuthTokenLogin()")
-        // 파이어베이스 인증
-        FirebaseAuth.getInstance().currentUser?.getIdToken(true)
-            ?.addOnCompleteListener { idTokenTask ->
-                if (idTokenTask.isSuccessful) {
-                    val idToken: String = idTokenTask.result?.token ?: ""
-                    Log.d(TAG, "idToken = $idToken")
-                    onResult(true, null)
-                } else {
-                    onResult(false, "구글 로그인 토큰 만료")
-                }
-            } ?: run {
-            onResult(false, "로그인 실패")
-        }
-    }
+    private val TAG = this::class.java.simpleName
 
     fun firebaseSaveUser(onComplet: (Boolean, User, String) -> Unit) {
         // 파이어베이스 사용자 정보 저장
@@ -107,7 +49,7 @@ object FirebaseManager {
         }
     }
 
-    private fun createUserData(firebaseUser: FirebaseUser): User {
+    fun createUserData(firebaseUser: FirebaseUser): User {
         // 사용자 정보를 User 객체로 생성
         return User(
             uid = firebaseUser.uid,
@@ -118,7 +60,7 @@ object FirebaseManager {
 
     fun addFirebaseCampingSites(
         campingSites: List<CampingSite>,
-        onComplete: (Boolean) -> Unit
+        onComplete: (Boolean) -> Unit,
     ) {
         //파이어스토어 데이터베이스에 캠핑장 리스트 일괄 저장.
         FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
@@ -144,12 +86,15 @@ object FirebaseManager {
         }
     }
 
-    fun addFirebaseCampingSite(user: User, place: Place) {
+    fun addFirebaseCampingSite(
+        campingDataUtil: CampingDataUtil,
+        user: User, place: Place,
+    ) {
         //파이어스토어 데이터베이스에 저장.
 //        MyLog.d(TAG, "addFirebaseCampingSite() user = $user")
 
         // 사용자 정보를 User 객체로 생성
-        val campingSite = createCampingSiteData(place)
+        val campingSite = campingDataUtil.createCampingSiteData(place)
 //        MyLog.d(TAG, "addFirebaseCampingSite() = $campingSite")
 
         val db = FirebaseFirestore.getInstance()
@@ -159,12 +104,12 @@ object FirebaseManager {
             .addOnSuccessListener {
                 // 데이터 저장 성공
                 Log.d("", "addOnSuccessListener()")
-                Toast.makeText(MyApplication.context, "저장 성공", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "저장 성공", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener { e ->
                 // 데이터 저장 실패
                 Log.w("", "addOnFailureListener() = ", e)
-                Toast.makeText(MyApplication.context, "저장 실패", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "저장 실패", Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -187,7 +132,7 @@ object FirebaseManager {
     }
 
     fun deleteFirebaseCampingSite(
-        campingSite: CampingSite, onComplete: (Boolean) -> Unit
+        campingSite: CampingSite, onComplete: (Boolean) -> Unit,
     ) {
         //파이어스토어 데이터베이스에 저장된 캠핑장 정보 삭제.
 //        MyLog.d(TAG, "deleteFirebaseCampingSite() campingSite = $campingSite")
@@ -237,11 +182,10 @@ object FirebaseManager {
         }
     }
 
-    fun firebaseAuthWithGoogle(
+    private fun firebaseAuthWithGoogle(
         idToken: String,
         saveUserData: Boolean = false,
-//        coroutineScope: CoroutineScope,
-        onComplete: (Boolean, String) -> Unit
+        onComplete: (Boolean, String) -> Unit,
     ) {
         // 파이어베이스 구글 메일 인증
         val credential = GoogleAuthProvider.getCredential(idToken, null)
@@ -257,7 +201,7 @@ object FirebaseManager {
                     if (saveUserData) {
                         MyLog.d("task.result?.user = ${task.result?.user?.uid}")
                         val u = createUser(
-//                            coroutinScope = coroutineScope,
+                            context,
                             uid = uid ?: "",
                             email = email ?: "",
                             username = displayName ?: "",
@@ -276,80 +220,39 @@ object FirebaseManager {
     }
 
     fun firebaseLoginGoogleInit(
-        context: Context,
-        launcher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>
+//        firebaseGoogleSignIn: FirebaseGoogleSignIn,
+        launcher: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>,
     ) {
-        val id = "287683711696-q7jdt8o3adrkrdan6jsgui8sg4kujvfk.apps.googleusercontent.com"
-        val signInRequest = BeginSignInRequest.builder()
-            .setGoogleIdTokenRequestOptions(
-                BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
-                    .setSupported(true)
-                    // Your server's client ID, not your Android client ID.
-                    .setServerClientId(context.resources.getString(R.string.default_web_client_id))
-//                    .setServerClientId(id)
-                    // Only show accounts previously used to sign in.
-                    .setFilterByAuthorizedAccounts(false)
-                    .build()
-            )
-            .build()
-
-        val signInClient: SignInClient = Identity.getSignInClient(context)
-        signInClient.beginSignIn(signInRequest)
-            .addOnSuccessListener { result ->
-                MyLog.d(TAG, "Google Sign-In success")
-                val intentSenderRequest = IntentSenderRequest.Builder(result.pendingIntent.intentSender).build()
-                launcher.launch(intentSenderRequest)
-            }
-            .addOnFailureListener { e ->
-                MyLog.e(TAG, "Google Sign-In failed: ${e.message}")
-            }
-
-
-//        val googleSignInOptions = GoogleSignInOptions
-//            .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-//            .requestIdToken(context.resources.getString(R.string.default_web_client_id))
-//            .requestEmail()
-//            .build()
-//
-//        val googleSignInClient = GoogleSignIn.getClient(context, googleSignInOptions)
-//        launcher.launch(googleSignInClient.signInIntent)
+        // 구글 로그인 초기화
+        val signInRequest = firebaseGoogleSignIn.getSignInRequest()
+        // [구글 로그인 시작]
+        firebaseGoogleSignIn.beginSignIn(signInRequest, launcher)
     }
 
     fun firebaseLoginGoogle(
+//        firebaseGoogleSignIn: FirebaseGoogleSignIn,
         activityResult: ActivityResult,
-//        coroutionScope: CoroutineScope,
         saveUserData: Boolean = false,
-        onComplete: (Boolean, String) -> Unit
+        onComplete: (Boolean, String) -> Unit,
     ) {
-        MyLog.d(TAG, "loginGoogle()")
-        val signInClient: SignInClient = Identity.getSignInClient(MyApplication.context)
+        MyLog.d(TAG, "firebaseLoginGoogle()")
+
+        val signInClient: SignInClient = Identity.getSignInClient(context)
         val credential = signInClient.getSignInCredentialFromIntent(activityResult.data)
         val idToken = credential.googleIdToken
         MyLog.d(TAG, "loginGoogle() idToken = $idToken")
         when {
             idToken != null -> {
-                // Got an ID token from Google. Use it to authenticate
-                // with Firebase.
-                val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
-                FirebaseAuth.getInstance().signInWithCredential(firebaseCredential)
-                    .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Log.d(TAG, "signInWithCredential:success")
-                            val user = FirebaseAuth.getInstance().currentUser
-//                            updateUser(idToken, user, coroutionScope, saveUserData) { success, message ->
-                            updateUser(idToken, user, saveUserData) { success, message ->
-
-                            if (success) onComplete(true, "")
-                                else onComplete(false, "")
-                            }
-
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            Log.w(TAG, "signInWithCredential:failure", task.exception)
-                            onComplete(false, "")
+                firebaseGoogleSignIn.firebaseAuthWithGoogle(idToken) { success, user ->
+                    if (success) {
+                        if (saveUserData) {
+                            dbUpdateUser(idToken, user) { _, _ -> }
                         }
+                        onComplete(true, "")
+                    } else {
+                        onComplete(false, "")
                     }
+                }
             }
 
             else -> {
@@ -358,52 +261,27 @@ object FirebaseManager {
                 onComplete(false, "")
             }
         }
-
-//        val task = GoogleSignIn.getSignedInAccountFromIntent(activityResult.data)
-//        task.addOnCompleteListener { completedTask ->
-//            MyLog.d(TAG, "loginGoogle() addOnCompleteListener()")
-//            try {
-//                val account = completedTask.getResult(ApiException::class.java)
-//                val idToken = account.idToken
-//                MyLog.d(TAG, "loginGoogle() addOnCompleteListener() idToken = $idToken")
-//                if (idToken != null) {
-//                    firebaseAuthWithGoogle(idToken, saveUserData, userDao, coroutionScope) { success, message ->
-//                        Log.d(TAG, "loginGoogle() firebaseAuthWithGoogle : $success")
-//                        if (success) onComplete(true, "")
-//                    }
-//                } else {
-//                    MyLog.e("Google ID Token is null")
-//                    onComplete(false, "")
-//                }
-//            } catch (e: ApiException) {
-//                MyLog.e("Google sign in failed: ${e.statusCode} ${e.status}")
-//                Toast.makeText(MyApplication.context, "구글 로그인 실패: ${e.statusCode}", Toast.LENGTH_SHORT).show()
-//                onComplete(false, "")
-//            }
-//        }
     }   //loginGoogle
 
-    private fun updateUser(
+    private fun dbUpdateUser(
         idToken: String,
         user: FirebaseUser?,
-//        coroutionScope: CoroutineScope,
-        saveUserData:Boolean = false,
-        onComplete: (Boolean, String) -> Unit
+        onComplete: (Boolean, String) -> Unit,
     ) {
         MyLog.d(TAG, "loginGoogle() idToken = $idToken")
         MyLog.d(TAG, "loginGoogle() user.udi = ${user?.uid}")
         MyLog.d(TAG, "loginGoogle() user.email = ${user?.email}")
         MyLog.d(TAG, "loginGoogle() user.displayName = ${user?.displayName}")
-
-        firebaseAuthWithGoogle(
-            idToken,
-            saveUserData,
-//            coroutionScope
-        ) { success, message ->
-            Log.d(TAG, "loginGoogle() firebaseAuthWithGoogle : $success")
-            if (success) onComplete(true, "")
-        }
-
+        val u = createUser(
+            context,
+            uid = user?.uid ?: "",
+            email = user?.email ?: "",
+            username = user?.displayName ?: "",
+            idToken = idToken,
+            loginType = LoginType.GOOGLE
+        )
+        MyLog.d("firebaseAuthWithGoogle() createUser = $u")
+        onComplete(true, "User 정보 저장 성공")
     }
 
 }

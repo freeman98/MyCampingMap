@@ -1,10 +1,12 @@
 package com.freeman.mycampingmap.utils
 
+import android.content.Context
 import android.util.Patterns
 import android.widget.Toast
-import com.freeman.mycampingmap.MyApplication
+import com.freeman.mycampingmap.App
 
 fun validateAndLoginCheck(
+    context: Context,
     email: String,
     password: String,
     confirmPassword: String? = null
@@ -34,7 +36,7 @@ fun validateAndLoginCheck(
         }
     }
     if (!check) {
-        Toast.makeText(MyApplication.context, message, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
     return check
 }

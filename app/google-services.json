@@ -20,6 +20,10 @@
             "package_name": "com.freeman.mycampingmap",
             "certificate_hash": "571320ebecd0ee666bdb7c880ffcbdce23a827d6"
           }
+        },
+        {
+          "client_id": "287683711696-258mj1anujlruli1p7qlv6384fe3h34b.apps.googleusercontent.com",
+          "client_type": 3
         }
       ],
       "api_key": [
@@ -29,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "287683711696-258mj1anujlruli1p7qlv6384fe3h34b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

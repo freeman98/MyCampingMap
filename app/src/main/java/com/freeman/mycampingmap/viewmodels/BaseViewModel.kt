@@ -1,16 +1,16 @@
 package com.freeman.mycampingmap.viewmodels
 
+import android.content.Context
 import android.location.Location
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.freeman.mycampingmap.MyApplication.Companion.context
-import com.freeman.mycampingmap.auth.FirebaseManager.emailSignIn
-import com.freeman.mycampingmap.auth.FirebaseManager.firebaseAuthTokenLogin
+import com.freeman.mycampingmap.App
+import com.freeman.mycampingmap.auth.FirbaseEmailPassword
+import com.freeman.mycampingmap.auth.FirebaseGoogleSignIn
+import com.freeman.mycampingmap.auth.FirebaseManager
+import com.freeman.mycampingmap.data.CampingDataUtil
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.db.CampingSiteDatabase
 import com.freeman.mycampingmap.db.CampingSiteRepository
@@ -19,15 +19,24 @@ import com.freeman.mycampingmap.db.UserFactory.createUser
 import com.freeman.mycampingmap.db.UserRepository
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.BaseViewModel.LiveDataBus._selectCampingSite
-import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-open class BaseViewModel @Inject constructor() : ViewModel() {
+open class BaseViewModel @Inject constructor(
+    @ApplicationContext open val context: Context,
+) : ViewModel() {
+
+    @Inject
+    lateinit var firebaseManager: FirebaseManager
+    @Inject
+    lateinit var firebaseGoogleSignIn: FirebaseGoogleSignIn
+    @Inject
+    lateinit var firebaseEmailPassword: FirbaseEmailPassword
+    @Inject
+    lateinit var campingDataUtil: CampingDataUtil
 
     //LiveData를 이용한 이벤트 버스
     object LiveDataBus {
@@ -47,10 +56,10 @@ open class BaseViewModel @Inject constructor() : ViewModel() {
 
     init {
         MyLog.d("", "BaseViewModel() init")
-        val userDao = UserDatabase.getDatabase(context).userDao()
+        val userDao = UserDatabase.getDatabase(App.appContext).userDao()
         userRepository = UserRepository(userDao)
 
-        val campingSiteDao = CampingSiteDatabase.getDatabase(context).campingSiteDao()
+        val campingSiteDao = CampingSiteDatabase.getDatabase(App.appContext).campingSiteDao()
         campingSiteRepository = CampingSiteRepository(campingSiteDao)
     }
 
@@ -59,7 +68,7 @@ open class BaseViewModel @Inject constructor() : ViewModel() {
         return campingSiteRepository.getAllCampingSites()
     }
 
-    fun dbAllCampingSite() {
+    fun dbAllDeleteCampingSite() {
         campingSiteRepository.allDelete()
     }
 
@@ -118,40 +127,35 @@ open class BaseViewModel @Inject constructor() : ViewModel() {
         fun peekContent(): T = content
     }
 
-    fun emailLogin(
+    fun emailPasswdLogin(
+        context: Context,
         email: String,
         password: String,
         saveUserData: Boolean = false,
         onComplete: (Boolean, String) -> Unit,
     ) {
         // 파이어베이스 이메일 로그인.
-        MyLog.d("", "emailLogin() = $email, $password")
+        MyLog.d("", "emailPasswdLogin() = $email, $password")
         _isLoading.value = true
-        val auth = FirebaseAuth.getInstance()
-        emailSignIn(email = email, password = password) { success, message ->
-            if (success) firebaseAuthTokenLogin { success, message ->
-                if (success) {
-                    auth.currentUser?.let { firebaseUser ->
-                        viewModelScope.launch {
-                            // 사용자 정보를 데이터베이스에 저장
-                            if (saveUserData) {
-                                createUser(
-                                    uid = firebaseUser.uid,
-                                    email = email,
-                                    password = password
-                                )
-                            }
-                            _isLoading.value = false
-                            onComplete(true, "로그인 성공")
-                        }   //viewModelScope.launch
-                    } ?: run { onComplete(false, message ?: "로그인 실패") }
-                } else {
-                    _isLoading.value = false
-                    onComplete(false, message ?: "로그인 실패")
+        firebaseEmailPassword.signIn(email, password) { success, user ->
+            if (success) {
+                user?.let {
+                    viewModelScope.launch {
+                        if (saveUserData) {
+                            createUser(
+                                context,
+                                uid = user.uid,
+                                email = email,
+                                password = password
+                            )
+                        }
+                        _isLoading.value = false
+                        onComplete(true, "로그인 성공")
+                    }   //viewModelScope.launch
                 }
             } else {
                 _isLoading.value = false
-                onComplete(false, message ?: "로그인 실패")
+                onComplete(false, "로그인 실패")
             }
         }
 

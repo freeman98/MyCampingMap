@@ -1,26 +1,23 @@
 package com.freeman.mycampingmap
 
 import android.app.Application
+import android.content.Context
 import com.google.android.libraries.places.api.Places
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
-class MyApplication : Application() {
+open class App: Application() {
 
     companion object {
-        lateinit var context: MyApplication
+        //    @Inject
+        lateinit var appContext: Context
     }
 
-    init {
-        context = this
-    }
-
-    override fun onCreate() {
+        override fun onCreate() {
         super.onCreate()
+        appContext = this.applicationContext
         Places.initialize(applicationContext, "AIzaSyBWBSrgjli6i8M6XIyCcVuwxXcrLn8LIrQ")
         FirebaseApp.initializeApp(this)
-
-
     }
 }

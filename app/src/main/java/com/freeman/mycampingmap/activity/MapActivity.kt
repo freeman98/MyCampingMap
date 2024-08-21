@@ -14,6 +14,7 @@ import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.viewmodels.BaseViewModel
 import com.freeman.mycampingmap.viewmodels.MapViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MapActivity : BaseActivity() {
@@ -54,13 +55,13 @@ class MapActivity : BaseActivity() {
 
     }
 
-    class MapViewModelFactory: ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(MapViewModel::class.java)) {
-                @Suppress("UNCHECKED_CAST")
-                return MapViewModel() as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
-    }
+//    class MapViewModelFactory: ViewModelProvider.Factory {
+//        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+//            if (modelClass.isAssignableFrom(MapViewModel::class.java)) {
+//                @Suppress("UNCHECKED_CAST")
+//                return MapViewModel() as T
+//            }
+//            throw IllegalArgumentException("Unknown ViewModel class")
+//        }
+//    }
 }

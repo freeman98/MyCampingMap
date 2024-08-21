@@ -14,6 +14,7 @@ import com.freeman.mycampingmap.compose.NavGraph
 import com.freeman.mycampingmap.ui.theme.MyCampingMapUITheme
 import com.freeman.mycampingmap.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : BaseActivity() {
@@ -21,8 +22,6 @@ class MainActivity : BaseActivity() {
     val TAG = this::class.java.simpleName
 
     private val mainViewModel by viewModels<MainViewModel>()
-//    private val mapViewModel by viewModels<MapViewModel>()
-//    private val sharedViewModel: SharedViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

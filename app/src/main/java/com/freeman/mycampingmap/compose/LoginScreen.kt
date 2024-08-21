@@ -44,23 +44,21 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.freeman.mycampingmap.MyApplication
+import com.freeman.mycampingmap.App
 import com.freeman.mycampingmap.R
-import com.freeman.mycampingmap.auth.FirebaseManager.firebaseLoginGoogle
-import com.freeman.mycampingmap.auth.FirebaseManager.firebaseLoginGoogleInit
 import com.freeman.mycampingmap.utils.MyLog
 import com.freeman.mycampingmap.utils.validateAndLoginCheck
-import com.freeman.mycampingmap.viewmodels.LoginViewModel
+import com.freeman.mycampingmap.viewmodels.MainViewModel
 
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel = viewModel(),
-    navController: NavHostController
+    viewModel: MainViewModel,
+    navController: NavHostController,
 ) {
-
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val isLoading by viewModel.isLoading.observeAsState(false)
@@ -99,19 +97,19 @@ fun LoginScreen(
 
 @Composable
 fun SNSLoginContent(
+    viewModel: MainViewModel,
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel
 ) {
     val context = LocalContext.current
     Row(modifier = modifier) {
         //구글 로그인
-        val launcher = googleRememberLauncherForActivityResult(navController)
+        val launcher = googleRememberLauncherForActivityResult(viewModel, navController)
         SNSLoginIconButton(
             resId = R.drawable.ibtn_light_rd_google,
             onClick = {
                 //구글 로그인 초기화
-                firebaseLoginGoogleInit(context, launcher)
+                viewModel.firebaseLoginGoogleInit(launcher)
             }
         )
 
@@ -126,10 +124,10 @@ fun SNSLoginContent(
 
 @Composable
 fun googleRememberLauncherForActivityResult(
+    viewModel: MainViewModel,
     navController: NavHostController,
 ): ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult> {
     //구글 로그인
-//    val coroutionScope = viewModel.viewModelScope
     val context = LocalContext.current
     return rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -137,9 +135,8 @@ fun googleRememberLauncherForActivityResult(
         MyLog.d("LoginScreen", "activityResult.resultCode : ${activityResult.resultCode}")
         if (activityResult.resultCode == Activity.RESULT_OK) {
 
-            firebaseLoginGoogle(
+            viewModel.firebaseLoginGoogle(
                 activityResult = activityResult,
-//                coroutionScope = coroutionScope,
                 saveUserData = true,
             ) { success, message ->
                 if (success) {
@@ -148,7 +145,7 @@ fun googleRememberLauncherForActivityResult(
                     }
                 }
             }
-        }else{
+        } else {
             //구글 로그인 실패 하면 앱종료
             (context as? Activity)?.finishAffinity()
         }
@@ -173,7 +170,11 @@ fun SNSLoginIconButton(resId: Int, onClick: () -> Unit) {
 @Preview
 @Composable
 fun SNSLoginContentPreview() {
-    SNSLoginContent(viewModel = viewModel(), navController = rememberNavController(), modifier = Modifier)
+    SNSLoginContent(
+        viewModel = viewModel(),
+        navController = rememberNavController(),
+        modifier = Modifier
+    )
 }
 
 @Composable
@@ -189,27 +190,27 @@ fun LoginScreenTextButton(navController: NavHostController) {
 
 @Composable
 fun LoginScreenButton(
-    viewModel: LoginViewModel,
+    viewModel: MainViewModel,
     email: String,
     password: String,
-    navController: NavHostController
+    navController: NavHostController,
 ) {
-
+    val context = LocalContext.current
     val onCLickLogin = onClickLogin@{
         // 로그인 처리 로직
-        if (!validateAndLoginCheck(email = email, password = password)) {
+        if (!validateAndLoginCheck(context = context, email = email, password = password)) {
             return@onClickLogin
         }
 
-        viewModel.emailLogin(
-            email = email, password = password, saveUserData = true
+        viewModel.emailPasswdLogin(
+            context = context, email = email, password = password, saveUserData = true
         ) { success, message ->
             if (success) {
                 navController.navigate(Screen.Home.route) {
                     popUpTo(Screen.Login.route) { inclusive = true }
                 }
             }
-            Toast.makeText(MyApplication.context, message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -300,5 +301,5 @@ fun EmailTextFieldPreview() {
 @Preview
 @Composable
 fun LoginScreenPreview() {
-    LoginScreen(navController = NavHostController(LocalContext.current))
+    LoginScreen(viewModel(), navController = NavHostController(LocalContext.current))
 }

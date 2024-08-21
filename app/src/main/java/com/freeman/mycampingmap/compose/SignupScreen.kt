@@ -23,13 +23,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.freeman.mycampingmap.MyApplication
+import com.freeman.mycampingmap.App
 import com.freeman.mycampingmap.utils.validateAndLoginCheck
 import com.freeman.mycampingmap.viewmodels.MainViewModel
 
 @Composable
 fun SignupScreen(
-    viewModel: MainViewModel = viewModel(),
+    viewModel: MainViewModel,
     navController: NavHostController,
 ) {
     var email by remember { mutableStateOf("") }
@@ -93,7 +93,7 @@ fun SignupButton(
     viewModel: MainViewModel
 ) {
     // 회원가입 버튼
-
+    val context = LocalContext.current
     val onComplete = { success: Boolean, message: String ->
         if (success) {
             // 회원가입 성공
@@ -102,12 +102,12 @@ fun SignupButton(
             }
         }
         isLoading(false)   // 로딩 상태 해제
-        Toast.makeText(MyApplication.context, message, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     Button(onClick = {
         // 회원가입 처리 로직
-        if (!validateAndLoginCheck(email, password, confirmPassword)) return@Button
+        if (!validateAndLoginCheck(context, email, password, confirmPassword)) return@Button
 
         isLoading(true)    // 로딩 상태로 변경
         // 회원가입 API 호출
@@ -124,5 +124,5 @@ fun SignupButton(
 @Preview
 @Composable
 fun SignupScreenPreview() {
-    SignupScreen(navController = NavHostController(LocalContext.current))
+    SignupScreen(viewModel(), navController = NavHostController(LocalContext.current))
 }

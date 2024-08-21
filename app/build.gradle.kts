@@ -69,15 +69,19 @@ dependencies {
     val hiltVersion by extra("2.50")
     implementation ("com.google.dagger:hilt-android:$hiltVersion")
     kapt ("com.google.dagger:hilt-android-compiler:$hiltVersion")
+    // Hilt with Jetpack Compose
+    implementation ("androidx.hilt:hilt-navigation-compose:1.0.0")
+
 
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation (libs.ui)
     implementation (libs.ui.tooling.preview)
-//    implementation (libs.androidx.room.runtime)
-//    implementation (libs.androidx.room.ktx)
+
+    //ROOM
     implementation ("androidx.room:room-runtime:2.6.1")
     implementation ("androidx.room:room-ktx:2.6.1")
     kapt ("androidx.room:room-compiler:2.6.1") // Kapt 사용
+
     implementation (libs.lifecycle.viewmodel.compose)
     implementation (libs.play.services.location)
     implementation (libs.places)
@@ -99,9 +103,12 @@ dependencies {
     implementation (libs.play.services.maps.v1900)
     implementation (libs.places)
     implementation (libs.firebase.firestore.ktx)
+
+    //Android에서 Google로 인증 관련
     implementation (platform(libs.firebase.bom))
     implementation (libs.firebase.auth.ktx)
     implementation (libs.play.services.auth)
+
     implementation (libs.accompanist.permissions)
     implementation (libs.lottie.compose)
 

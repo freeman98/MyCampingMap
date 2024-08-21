@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -326,6 +327,7 @@ fun SerchListViewCard(
     onClickCampingSite: (Place) -> Unit,
 ) {
 //    MyLog.d(TAG, "SerchListViewCard() $place")
+//    val context = LocalContext.current
     val typography = MaterialTheme.typography
     val elevation = CardDefaults.cardElevation(
         defaultElevation = 0.dp
@@ -345,6 +347,7 @@ fun SerchListViewCard(
             .padding(10.dp),    //카드간 간격.
         elevation = elevation   //그림자 영역 지정.
     ) {
+        val context = LocalContext.current
         Column(
             /*
             - horizontalArrangement Arrangement = 요소를 어떤식으로 배열할지 설정, Start, End, Center 만 존재.
@@ -381,7 +384,7 @@ fun SerchListViewCard(
                     style = typography.bodyMedium,
                     onClick = {
                         Log.d("", "SerchListViewCard() onClick: $phoneNumber")
-                        callPhone(phoneNumber)
+                        callPhone(context, phoneNumber)
                     })
             }
             place.websiteUri?.let { uri ->
@@ -390,7 +393,7 @@ fun SerchListViewCard(
                     style = typography.bodyMedium,
                     onClick = {
                         Log.d("", "SerchListViewCard() onClick: $uri")
-                        openWebPage(uri)
+                        openWebPage(context, uri)
                     })
             }
             place.rating?.let {

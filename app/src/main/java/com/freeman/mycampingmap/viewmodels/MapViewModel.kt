@@ -13,12 +13,8 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.freeman.mycampingmap.MyApplication
-import com.freeman.mycampingmap.MyApplication.Companion.context
 import com.freeman.mycampingmap.R
-import com.freeman.mycampingmap.auth.FirebaseManager.addFirebaseCampingSite
-import com.freeman.mycampingmap.auth.FirebaseManager.firebaseSaveUser
-import com.freeman.mycampingmap.data.CampingDataUtil.createCampingSiteData
+import com.freeman.mycampingmap.data.CampingDataUtil
 import com.freeman.mycampingmap.db.CampingSite
 import com.freeman.mycampingmap.utils.MyLocation
 import com.freeman.mycampingmap.utils.MyLocation.parseLatLng
@@ -36,21 +32,22 @@ import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
 import com.google.android.libraries.places.api.net.SearchNearbyRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.pow
 
 @HiltViewModel
-class MapViewModel @Inject constructor(): BaseViewModel() {
-
-
+class MapViewModel @Inject constructor(@ApplicationContext override val context: Context) :
+    BaseViewModel(context) {
     val TAG: String = MapViewModel::class.java.simpleName
+
+    private val placesClient: PlacesClient = Places.createClient(context)
 
     companion object {
 
         const val DEFAULT_ZOOM_LEVEL: Float = 13F
         val SEOUL_LATLNG = LatLng(37.5665, 126.9780) // 서울의 좌표
-        private val placesClient: PlacesClient = Places.createClient(context)
 
         //지도 검색 타입 캠핑장.
         val typeList = listOf("campground")
@@ -199,7 +196,10 @@ class MapViewModel @Inject constructor(): BaseViewModel() {
         // 카메라 이동 리스너 추가
         map.setOnCameraIdleListener {
             val camerCenterLatlng = map.cameraPosition.target
-            MyLog.d(TAG, "camerCenterLatlng: Latitude = ${camerCenterLatlng.latitude}, Longitude = ${camerCenterLatlng.longitude}")
+            MyLog.d(
+                TAG,
+                "camerCenterLatlng: Latitude = ${camerCenterLatlng.latitude}, Longitude = ${camerCenterLatlng.longitude}"
+            )
             // 여기서 center 좌표를 활용하여 원하는 작업을 수행할 수 있습니다.
 
         }
@@ -247,15 +247,18 @@ class MapViewModel @Inject constructor(): BaseViewModel() {
                 map[marker] = place
             }
         }
-        if (map.isEmpty()) Toast.makeText(MyApplication.context, "검색 결과가 없습니다.", Toast.LENGTH_SHORT)
+        if (map.isEmpty()) Toast.makeText(context, "검색 결과가 없습니다.", Toast.LENGTH_SHORT)
             .show()
         _markerPlaceMap.value = map
     }
 
     private fun myCurrentLocation(onResult: (Boolean, String, String) -> Unit) {
         viewModelScope.launch {
-            MyLocation.requestLocation { isSuccess, latitude, longitude ->
-                MyLog.d(TAG, "myCurrentLocation() isSuccess = $isSuccess, latitude=$latitude, longitude=$longitude")
+            MyLocation.requestLocation(context) { isSuccess, latitude, longitude ->
+                MyLog.d(
+                    TAG,
+                    "myCurrentLocation() isSuccess = $isSuccess, latitude=$latitude, longitude=$longitude"
+                )
                 if (isSuccess) {
                     //내 위치 찾기 성공.
                     val mylocation = Location("").apply {
@@ -288,7 +291,7 @@ class MapViewModel @Inject constructor(): BaseViewModel() {
         position: LatLng,
         title: String,
         snippet: String?,
-        marker_hue: Float
+        marker_hue: Float,
     ): MarkerOptions {
 //        val bitmap: Bitmap =
 //            BitmapFactory.decodeResource(context.resources, marker_id)
@@ -413,7 +416,7 @@ class MapViewModel @Inject constructor(): BaseViewModel() {
     private fun calculateRadiusInMeters(mpaLiveData: MutableLiveData<GoogleMap?>): Double {
         mpaLiveData.value?.let { map ->
             val zoomLevel = map.cameraPosition.zoom
-            val mapWidthInPixels = MyApplication.context.resources.displayMetrics.widthPixels
+            val mapWidthInPixels = context.resources.displayMetrics.widthPixels
 //            MyLog.d(TAG, "zoomLevel = $zoomLevel")
 
             val worldSize = 40075016.686 // Earth's circumference in meters
@@ -431,17 +434,22 @@ class MapViewModel @Inject constructor(): BaseViewModel() {
     }
 
     fun insertCampingSite(
-        place: Place
+        place: Place,
     ) {
         // db에 캠핑장 추가.
         MyLog.d(TAG, "insertCampingSite()")
-        dbCampingSiteInsert(createCampingSiteData(place)) { success ->
+        dbCampingSiteInsert(
+            campingDataUtil.createCampingSiteData(place)
+        ) { success ->
             //db 저장.
             if (success) {
                 //firebase 유져 저장.
-                firebaseSaveUser { success, user, message ->
+                firebaseManager.firebaseSaveUser { success, user, message ->
                     //firebase 캠핑장 저장.
-                    if (success) addFirebaseCampingSite(user, place)
+                    if (success) firebaseManager.addFirebaseCampingSite(
+                        campingDataUtil,
+                        user, place
+                    )
                 }
             }
         }
@@ -484,7 +492,7 @@ class MapViewModel @Inject constructor(): BaseViewModel() {
         MyLog.d(TAG, "myCampingSiteListMarker() list.size() = ${myCampingList.size}")
         val myCampingMaps = mutableMapOf<Marker, CampingSite>()
         myCampingList.forEach { site ->
-            parseLatLng(site.location)?.let {latLng ->
+            parseLatLng(site.location)?.let { latLng ->
                 val markerOption = createMarkerOptions(
                     latLng, site.name, site.address,
                     BitmapDescriptorFactory.HUE_BLUE

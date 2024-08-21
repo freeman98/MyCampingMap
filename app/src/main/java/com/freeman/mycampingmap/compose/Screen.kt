@@ -19,6 +19,7 @@ package com.freeman.mycampingmap.compose
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavHostController
@@ -70,7 +71,7 @@ fun NavGraph(viewModel: MainViewModel, navController: NavHostController) {
             SplashScreen(viewModel = viewModel, navController = navController)
         }
         composable(Screen.Login.route) {
-            LoginScreen(navController = navController)
+            LoginScreen(viewModel = viewModel, navController = navController)
         }
         composable(Screen.Signup.route) {
             SignupScreen(viewModel = viewModel, navController = navController)

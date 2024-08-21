@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TestComposeUI"
+rootProject.name = "MyCampingMap"
 
 include(":app")
  

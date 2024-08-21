@@ -32,13 +32,13 @@ import com.google.accompanist.permissions.rememberPermissionState
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun SplashScreen(
+    viewModel: MainViewModel,
     navController: NavHostController,
-    viewModel: MainViewModel = viewModel()
 ) {
 //    Log.d("Splash", "SplashScreen() ")
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.splash_animation))
     val lottieAnimatable = rememberLottieAnimatable()
-    val user by viewModel.loginUser.observeAsState()
+    val dbLoginUser by viewModel.loginUser.observeAsState()
 
     LaunchedEffect(composition) {
         lottieAnimatable.animate(
@@ -52,14 +52,14 @@ fun SplashScreen(
         // 위치 권한
         permission = Manifest.permission.ACCESS_FINE_LOCATION
     )
-    val launcher = googleRememberLauncherForActivityResult(navController)
+    val launcher = googleRememberLauncherForActivityResult(viewModel, navController)
 
-    LaunchedEffect(user) {
+    LaunchedEffect(dbLoginUser) {
         viewModel.getDBUser()
-        MyLog.d("Splash", "user = $user")
+        MyLog.d("Splash", "user = $dbLoginUser")
         if (locationPermissionState.status.isGranted) {
             // 위치 권한이 허용 일때. - 로그인 처리 로직
-            user?.let {
+            dbLoginUser?.let {
                 viewModel.loginTypeCheckUser(it, launcher) { success, message ->
                     if (success) {
                         Log.d("Splash", "로그인 성공")
@@ -88,7 +88,7 @@ fun SplashScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        if (user == null) {
+        if (dbLoginUser == null) {
             // 로그인 정보가 없는경우 로그인 버튼 노출
             LoginButton(
                 modifier = Modifier.offset(y = 150.dp),
@@ -117,5 +117,5 @@ fun LoginButton(modifier: Modifier = Modifier, navController: NavHostController)
 @Preview
 @Composable
 fun SplashScreenPreview() {
-    SplashScreen(navController = NavHostController(LocalContext.current))
+    SplashScreen(viewModel(), navController = NavHostController(LocalContext.current))
 }

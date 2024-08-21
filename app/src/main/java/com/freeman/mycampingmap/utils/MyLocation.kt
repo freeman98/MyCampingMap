@@ -6,11 +6,8 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import androidx.core.app.ActivityCompat
-import com.freeman.mycampingmap.MyApplication
-import com.freeman.mycampingmap.MyApplication.Companion.context
+import com.freeman.mycampingmap.App
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.LocationRequest
@@ -33,14 +30,14 @@ object MyLocation {
      * 현재 위치를 조회할 수 있으면 조회하고(getCurrentLocation)
      * 조회할 수 없다면 마지막 위치 값 사용(as-is 코드: getLastKnownLocation)
      */
-    suspend fun requestLocation(onResult: (Boolean, String, String) -> Unit) {
+    suspend fun requestLocation(context: Context, onResult: (Boolean, String, String) -> Unit) {
         return suspendCoroutine { continuation ->
             MyLog.d(TAG, "requestLocation()")
             try {
                 val isGrant = ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         || ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 if (isGrant
-                    && servicesEnabled()
+                    && servicesEnabled(context)
                     && GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS) {
                     try {
                         LocationServices.getFusedLocationProviderClient(context).getCurrentLocation(LocationRequest.PRIORITY_HIGH_ACCURACY, null)
@@ -52,7 +49,7 @@ object MyLocation {
                                     continuation.resume(onResult(true, latestLatitude, latestLongitude))
                                 } else {
 //                                    Handler(Looper.getMainLooper()).post { onResult(false, "", "") }
-                                    getLastLocation(continuation,onResult)
+                                    getLastLocation(context, continuation,onResult)
                                 }
                             }
                             .addOnFailureListener {
@@ -65,7 +62,7 @@ object MyLocation {
                         continuation.resume(onResult(false, "", ""))
                     }
                 } else {
-                    getLastLocation(continuation, onResult)
+                    getLastLocation(context, continuation, onResult)
                 }
             } catch (e: NullPointerException) {
                 e.printStackTrace()
@@ -76,6 +73,7 @@ object MyLocation {
     }
 
     private fun getLastLocation(
+        context: Context,
         continuation: Continuation<Unit>,
         onResult: (Boolean, String, String) -> Unit
     ) {
@@ -105,7 +103,7 @@ object MyLocation {
         }
     }
 
-    fun servicesEnabled(): Boolean {
+    fun servicesEnabled(context: Context): Boolean {
         (context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager)?.let { locationManager ->
             // [설정] - [위치] - [위치 서비스] - [Google 위치 정확도] - [위치 정확도 개선]  on/off 설정값.
             var network_provider = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
@@ -119,7 +117,7 @@ object MyLocation {
     }
 
     // TODO: 20220713, v20.1.0, freeman, Google 위치 정확도 개선 여부 조회 API 개발
-    fun gpsServicesEnabled(): Boolean {
+    fun gpsServicesEnabled(context: Context): Boolean {
         (context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager)?.let { locationManager ->
             // [설정] - [위치] - [위치 서비스] - [Google 위치 정확도] - [위치 정확도 개선]  on/off 설정값.
             val gps_provider = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
@@ -130,7 +128,7 @@ object MyLocation {
         }
     }
 
-    fun networkServicesEnabled(): Boolean {
+    fun networkServicesEnabled(context: Context): Boolean {
         (context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager)?.let { locationManager ->
             var network_provider = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
             MyLog.d(TAG,"networkServicesEnabled() network_provider = $network_provider")
@@ -140,12 +138,12 @@ object MyLocation {
         }
     }
 
-    fun hasLocationPermission(): Boolean {
+    fun hasLocationPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             //정확한 위치 권한
-            val permission_fine_location = MyApplication.context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+            val permission_fine_location = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
             //대략적인 위치 권한
-            val permission_coarse_location = MyApplication.context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+            val permission_coarse_location = context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
             MyLog.d(TAG,"permission_fine_location = $permission_fine_location")
             MyLog.d(TAG,"permission_coarse_location = $permission_coarse_location")
 
